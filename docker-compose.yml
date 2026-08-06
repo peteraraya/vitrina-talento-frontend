@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: portal_desempleo_frontend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      # Asigna la URL de la API del backend si es necesario
+      - NEXT_PUBLIC_API_URL=http://localhost:3000/api/v1
+    restart: unless-stopped
