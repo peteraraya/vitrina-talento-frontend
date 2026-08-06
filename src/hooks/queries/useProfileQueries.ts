@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchApi } from '@/lib/api';
+import { API_ROUTES } from '@/config/api.config';
 import { useAuthStore } from '@/store/useAuthStore';
 import { 
   ProfileFormValues, 
@@ -7,6 +8,14 @@ import {
   AvailabilityFormValues 
 } from '@/schemas/profile.schema';
 
+/**
+ * Custom Hook que encapsula la capa de acceso a datos para la gestión del Perfil.
+ * 
+ * Expone un servicio unificado para hidratar la UI con datos de perfil y disponibilidad,
+ * además de proveer las mutaciones correspondientes con invalidación inteligente de caché.
+ *
+ * @returns {Object} Queries y mutaciones listas para ser consumidas por las vistas.
+ */
 export function useProfileQueries() {
   const { isAuthenticated } = useAuthStore();
   const queryClient = useQueryClient();
@@ -15,11 +24,11 @@ export function useProfileQueries() {
   const profileQuery = useQuery({
     queryKey: ['profile', 'me'],
     queryFn: async () => {
-      const res = await fetchApi('/profiles/me');
+      const res = await fetchApi(API_ROUTES.PROFILE.ME);
       if (!res.ok) {
         if (res.status === 404) {
-          await fetchApi('/profiles', { method: 'POST' });
-          const retryRes = await fetchApi('/profiles/me');
+          await fetchApi(API_ROUTES.PROFILE.CREATE, { method: 'POST' });
+          const retryRes = await fetchApi(API_ROUTES.PROFILE.ME);
           return retryRes.json();
         }
         throw new Error('No se pudo obtener el perfil');
@@ -33,7 +42,7 @@ export function useProfileQueries() {
   const availabilityQuery = useQuery({
     queryKey: ['availability', 'me'],
     queryFn: async () => {
-      const res = await fetchApi('/availability/me');
+      const res = await fetchApi(API_ROUTES.AVAILABILITY.ME);
       if (!res.ok) throw new Error('No se pudo obtener la disponibilidad');
       return res.json();
     },
@@ -43,7 +52,7 @@ export function useProfileQueries() {
   // Mutation for Profile Update
   const updateProfileMutation = useMutation({
     mutationFn: async (values: ProfileFormValues) => {
-      const res = await fetchApi('/profiles/me', {
+      const res = await fetchApi(API_ROUTES.PROFILE.ME, {
         method: 'PATCH',
         body: JSON.stringify(values),
       });
@@ -63,7 +72,7 @@ export function useProfileQueries() {
   // Mutation for Visibility Update
   const updateVisibilityMutation = useMutation({
     mutationFn: async (values: VisibilityFormValues) => {
-      const res = await fetchApi('/profiles/me/visibility', {
+      const res = await fetchApi(API_ROUTES.PROFILE.VISIBILITY, {
         method: 'PATCH',
         body: JSON.stringify(values),
       });
@@ -83,7 +92,7 @@ export function useProfileQueries() {
   // Mutation for Availability Update
   const updateAvailabilityMutation = useMutation({
     mutationFn: async (values: AvailabilityFormValues) => {
-      const res = await fetchApi('/availability/me', {
+      const res = await fetchApi(API_ROUTES.AVAILABILITY.ME, {
         method: 'PATCH',
         body: JSON.stringify(values),
       });
