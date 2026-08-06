@@ -1,44 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Briefcase, ShieldCheck, Zap, ArrowRight, UserCircle, LogIn, Search, Star, TrendingUp } from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { Button } from '@/components/ui';
+import { Navbar, Footer } from '@/components/layout';
+import { ShieldCheck, ArrowRight, Search, Star, TrendingUp } from 'lucide-react';
 
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0A0A0A] text-[#111111] dark:text-gray-200 transition-colors duration-300">
-      {/* Header / Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md transition-colors duration-300">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-blue-600 text-white p-1.5 rounded-lg shadow-sm">
-              <Briefcase className="h-6 w-6" />
-            </div>
-            <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Vitrina Talento</span>
-          </div>
-          <nav className="hidden md:flex gap-8 items-center text-sm font-medium text-gray-600 dark:text-gray-300">
-            <Link href="#features" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Características</Link>
-            <Link href="#how-it-works" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Cómo funciona</Link>
-            <Link href="#testimonials" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Testimonios</Link>
-          </nav>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Link href="/login" className="hidden sm:block">
-              <Button variant="ghost" className="gap-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50">
-                <LogIn className="h-4 w-4" />
-                Ingresar
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button className="gap-2 bg-blue-600 text-white hover:bg-blue-700 shadow-md">
-                <UserCircle className="h-4 w-4" />
-                Crear Cuenta
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="flex-1">
         {/* Hero Section */}
@@ -59,17 +29,17 @@ export default function Home() {
                 Potencia tu carrera profesional con privacidad absoluta. Las empresas top ya están buscando candidatos como tú.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
-                <Link href="/register">
-                  <Button size="lg" className="h-14 px-8 text-lg gap-2 w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-600/20 rounded-xl">
+                <Button asChild variant="default" size="xl" className="w-full sm:w-auto shadow-blue-600/20">
+                  <Link href="/register">
                     Comenzar como Candidato
                     <ArrowRight className="h-5 w-5" />
-                  </Button>
-                </Link>
-                <Link href="/register">
-                  <Button size="lg" variant="outline" className="h-14 px-8 text-lg w-full sm:w-auto border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 dark:bg-transparent rounded-xl">
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="xl" className="w-full sm:w-auto">
+                  <Link href="/register">
                     Soy Empresa / Reclutador
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </div>
             </div>
           </div>
@@ -126,34 +96,16 @@ export default function Home() {
           <div className="container mx-auto px-4 relative z-10 text-center">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">¿Listo para dar el siguiente paso?</h2>
             <p className="text-blue-100 text-xl max-w-2xl mx-auto mb-10">Únete a miles de profesionales que ya han encontrado su trabajo soñado a través de nuestra plataforma.</p>
-            <Link href="/register">
-              <Button size="lg" className="h-14 px-10 text-lg bg-white text-blue-600 hover:bg-gray-50 rounded-xl shadow-xl border-0">
+            <Button asChild variant="light" size="xl" className="px-10">
+              <Link href="/register">
                 Crear mi cuenta gratis
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white dark:bg-[#0A0A0A] border-t border-gray-200 dark:border-gray-800 py-12 transition-colors duration-300">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2">
-              <Briefcase className="h-6 w-6 text-blue-600 dark:text-blue-500" />
-              <span className="font-bold text-xl text-gray-900 dark:text-white">Vitrina Talento</span>
-            </div>
-            <div className="flex gap-6 text-sm text-gray-600 dark:text-gray-400 font-medium">
-              <Link href="#" className="hover:text-blue-600 dark:hover:text-blue-400">Términos</Link>
-              <Link href="#" className="hover:text-blue-600 dark:hover:text-blue-400">Privacidad</Link>
-              <Link href="#" className="hover:text-blue-600 dark:hover:text-blue-400">Contacto</Link>
-            </div>
-          </div>
-          <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-500">
-            &copy; {new Date().getFullYear()} Vitrina Talento. Todos los derechos reservados.
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

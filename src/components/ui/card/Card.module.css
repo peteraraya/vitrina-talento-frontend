@@ -1,0 +1,25 @@
+@reference "../../../app/globals.css";
+
+.card {
+  @apply rounded-xl border bg-card text-card-foreground shadow;
+}
+
+.header {
+  @apply flex flex-col space-y-1.5 p-6;
+}
+
+.title {
+  @apply font-semibold leading-none tracking-tight;
+}
+
+.description {
+  @apply text-sm text-muted-foreground;
+}
+
+.content {
+  @apply p-6 pt-0;
+}
+
+.footer {
+  @apply flex items-center p-6 pt-0;
+}

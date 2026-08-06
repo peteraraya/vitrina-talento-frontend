@@ -5,54 +5,33 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchApi } from '@/lib/api';
+import { useProfileQueries } from '@/hooks/queries/useProfileQueries';
+import { 
+  profileSchema, visibilitySchema, availabilitySchema,
+  ProfileFormValues, VisibilityFormValues, AvailabilityFormValues
+} from '@/schemas/profile.schema';
+import { Navbar, Footer } from '@/components/layout';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-
-const profileSchema = z.object({
-  displayName: z.string().min(2, 'Name must be at least 2 characters').optional(),
-  headline: z.string().min(5, 'Headline is too short').optional(),
-  summary: z.string().optional(),
-  location: z.string().optional(),
-  yearsOfExperience: z.coerce.number().min(0, 'Must be a positive number').optional(),
-  languages: z.array(z.object({
-    name: z.string().min(1),
-    level: z.string().min(1),
-  })).optional(),
-  educations: z.array(z.object({
-    institution: z.string().min(1),
-    degree: z.string().min(1),
-    fieldOfStudy: z.string().optional(),
-  })).optional(),
-  certifications: z.array(z.object({
-    name: z.string().min(1),
-    issuer: z.string().min(1),
-    credentialUrl: z.string().optional(),
-  })).optional(),
-});
-
-const visibilitySchema = z.object({
-  visibility: z.enum(['PUBLIC', 'ANONYMIZED', 'PRIVATE']),
-});
-
-const availabilitySchema = z.object({
-  status: z.enum(['IMMEDIATE', 'TWO_WEEKS', 'ONE_MONTH', 'NOT_LOOKING']),
-  workMode: z.enum(['REMOTE', 'HYBRID', 'ONSITE']),
-  contractType: z.enum(['FULL_TIME', 'PART_TIME', 'FREELANCE', 'CONTRACT']),
-  expectedSalaryMin: z.coerce.number().optional(),
-  expectedSalaryMax: z.coerce.number().optional(),
-  currency: z.string().optional(),
-});
+import { 
+  Card, CardContent, CardDescription, CardHeader, CardTitle,
+  Input, Button, Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
+  Select, Textarea 
+} from '@/components/ui';
 
 export default function ProfilePage() {
   const { isAuthenticated } = useAuthStore();
   const router = useRouter();
-  const queryClient = useQueryClient();
+  
+  const { 
+    profileQuery, 
+    availabilityQuery, 
+    updateProfileMutation, 
+    updateVisibilityMutation, 
+    updateAvailabilityMutation 
+  } = useProfileQueries();
+
+  const { data: profile, isLoading } = profileQuery;
+  const { data: availability, isLoading: isAvailabilityLoading } = availabilityQuery;
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -60,36 +39,7 @@ export default function ProfilePage() {
     }
   }, [isAuthenticated, router]);
 
-  // Fetch Profile Data
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ['profile', 'me'],
-    queryFn: async () => {
-      const res = await fetchApi('/profiles/me');
-      if (!res.ok) {
-        if (res.status === 404) {
-          await fetchApi('/profiles', { method: 'POST' });
-          const retryRes = await fetchApi('/profiles/me');
-          return retryRes.json();
-        }
-        throw new Error('Failed to fetch profile');
-      }
-      return res.json();
-    },
-    enabled: isAuthenticated,
-  });
-
-  // Fetch Availability Data
-  const { data: availability, isLoading: isAvailabilityLoading } = useQuery({
-    queryKey: ['availability', 'me'],
-    queryFn: async () => {
-      const res = await fetchApi('/availability/me');
-      if (!res.ok) throw new Error('Failed to fetch availability');
-      return res.json();
-    },
-    enabled: isAuthenticated,
-  });
-
-  const form = useForm<z.infer<typeof profileSchema>>({
+  const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       displayName: '',
@@ -107,14 +57,14 @@ export default function ProfilePage() {
   const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({ control: form.control, name: "educations" });
   const { fields: certFields, append: appendCert, remove: removeCert } = useFieldArray({ control: form.control, name: "certifications" });
 
-  const visibilityForm = useForm<z.infer<typeof visibilitySchema>>({
+  const visibilityForm = useForm<VisibilityFormValues>({
     resolver: zodResolver(visibilitySchema),
     defaultValues: {
       visibility: 'ANONYMIZED',
     },
   });
 
-  const availabilityForm = useForm<z.infer<typeof availabilitySchema>>({
+  const availabilityForm = useForm<AvailabilityFormValues>({
     resolver: zodResolver(availabilitySchema),
     defaultValues: {
       status: 'NOT_LOOKING',
@@ -155,70 +105,14 @@ export default function ProfilePage() {
     }
   }, [profile, availability, form, visibilityForm, availabilityForm]);
 
-  // Mutation for Profile Update
-  const updateProfileMutation = useMutation({
-    mutationFn: async (values: z.infer<typeof profileSchema>) => {
-      const res = await fetchApi('/profiles/me', {
-        method: 'PATCH',
-        body: JSON.stringify(values),
-      });
-      if (!res.ok) throw new Error('Failed to update profile');
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile', 'me'] });
-      alert('Profile updated successfully!');
-    },
-    onError: (err) => {
-      if (err instanceof Error) alert(err.message);
-      else alert('An error occurred');
-    },
-  });
-
-  // Mutation for Visibility Update
-  const updateVisibilityMutation = useMutation({
-    mutationFn: async (values: z.infer<typeof visibilitySchema>) => {
-      const res = await fetchApi('/profiles/me/visibility', {
-        method: 'PATCH',
-        body: JSON.stringify(values),
-      });
-      if (!res.ok) throw new Error('Failed to update visibility');
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile', 'me'] });
-      alert('Visibility updated successfully!');
-    },
-    onError: (err) => {
-      if (err instanceof Error) alert(err.message);
-      else alert('An error occurred');
-    },
-  });
-
-  // Mutation for Availability Update
-  const updateAvailabilityMutation = useMutation({
-    mutationFn: async (values: z.infer<typeof availabilitySchema>) => {
-      const res = await fetchApi('/availability/me', {
-        method: 'PATCH',
-        body: JSON.stringify(values),
-      });
-      if (!res.ok) throw new Error('Failed to update availability');
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['availability', 'me'] });
-      alert('Availability updated successfully!');
-    },
-    onError: (err) => {
-      if (err instanceof Error) alert(err.message);
-      else alert('An error occurred');
-    },
-  });
-
-  if (!isAuthenticated || isLoading || isAvailabilityLoading) return <div className="p-8">Loading...</div>;
+  if (!isAuthenticated || isLoading || isAvailabilityLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
+  }
 
   return (
-    <div className="container mx-auto p-8 max-w-3xl">
+    <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0A0A0A] transition-colors duration-300">
+      <Navbar />
+      <div className="container mx-auto p-8 max-w-3xl flex-1">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Mi Perfil</h1>
         <Button variant="outline" onClick={() => router.push('/dashboard')}>Volver</Button>
@@ -243,16 +137,13 @@ export default function ProfilePage() {
                 render={({ field }) => (
                   <FormItem className="flex-1">
                     <FormLabel>Visibilidad</FormLabel>
-                    <FormControl>
-                      <select
-                        {...field}
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <option value="PUBLIC">Público (Indexado en buscadores)</option>
-                        <option value="ANONYMIZED">Anonimizado (Recomendado)</option>
-                        <option value="PRIVATE">Privado (No visible)</option>
-                      </select>
-                    </FormControl>
+                      <FormControl>
+                        <Select {...field}>
+                          <option value="PUBLIC">Público (Indexado en buscadores)</option>
+                          <option value="ANONYMIZED">Anonimizado (Recomendado)</option>
+                          <option value="PRIVATE">Privado (No visible)</option>
+                        </Select>
+                      </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -280,15 +171,12 @@ export default function ProfilePage() {
                     <FormItem>
                       <FormLabel>Estado</FormLabel>
                       <FormControl>
-                        <select
-                          {...field}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        >
+                        <Select {...field}>
                           <option value="IMMEDIATE">Inmediata</option>
                           <option value="TWO_WEEKS">2 Semanas</option>
                           <option value="ONE_MONTH">1 Mes</option>
                           <option value="NOT_LOOKING">No busco</option>
-                        </select>
+                        </Select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -302,14 +190,11 @@ export default function ProfilePage() {
                     <FormItem>
                       <FormLabel>Modalidad</FormLabel>
                       <FormControl>
-                        <select
-                          {...field}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        >
+                        <Select {...field}>
                           <option value="REMOTE">Remoto</option>
                           <option value="HYBRID">Híbrido</option>
                           <option value="ONSITE">Presencial</option>
-                        </select>
+                        </Select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -323,15 +208,12 @@ export default function ProfilePage() {
                     <FormItem>
                       <FormLabel>Tipo de Contrato</FormLabel>
                       <FormControl>
-                        <select
-                          {...field}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        >
+                        <Select {...field}>
                           <option value="FULL_TIME">Full Time</option>
                           <option value="PART_TIME">Part Time</option>
                           <option value="FREELANCE">Freelance</option>
                           <option value="CONTRACT">Contrato Fijo</option>
-                        </select>
+                        </Select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -434,9 +316,8 @@ export default function ProfilePage() {
                     <FormItem>
                       <FormLabel>Resumen (Bio)</FormLabel>
                       <FormControl>
-                        <textarea
+                        <Textarea
                           {...field}
-                          className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           placeholder="Breve resumen de tu perfil profesional..."
                         />
                       </FormControl>
@@ -502,12 +383,12 @@ export default function ProfilePage() {
                         <FormItem className="flex-1">
                           <FormLabel>Nivel</FormLabel>
                           <FormControl>
-                            <select {...field} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
+                            <Select {...field}>
                               <option value="Básico">Básico</option>
                               <option value="Intermedio">Intermedio</option>
                               <option value="Avanzado">Avanzado</option>
                               <option value="Nativo">Nativo</option>
-                            </select>
+                            </Select>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -595,6 +476,8 @@ export default function ProfilePage() {
           </Form>
         </CardContent>
       </Card>
+      </div>
+      <Footer />
     </div>
   );
 }
