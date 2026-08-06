@@ -6,6 +6,9 @@ export const profileSchema = z.object({
   summary: z.string().optional(),
   location: z.string().optional(),
   yearsOfExperience: z.coerce.number().min(0, 'Debe ser un número positivo').optional(),
+  githubUrl: z.string().url('Debe ser una URL válida').or(z.literal('')).optional(),
+  linkedinUrl: z.string().url('Debe ser una URL válida').or(z.literal('')).optional(),
+  portfolioUrl: z.string().url('Debe ser una URL válida').or(z.literal('')).optional(),
   languages: z.array(z.object({
     name: z.string().min(1, 'Obligatorio'),
     level: z.string().min(1, 'Obligatorio'),

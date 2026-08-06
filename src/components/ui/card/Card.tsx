@@ -6,7 +6,7 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn(styles.card, className)}
+      className={cn("rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#161616] text-gray-900 dark:text-gray-100 shadow-sm", styles.cardModule, className)}
       {...props}
     />
   )
@@ -17,7 +17,7 @@ const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn(styles.header, className)}
+      className={cn("flex flex-col space-y-1.5 p-6", styles.headerModule, className)}
       {...props}
     />
   )
@@ -28,7 +28,7 @@ const CardTitle = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivE
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn(styles.title, className)}
+      className={cn("font-semibold leading-none tracking-tight", styles.titleModule, className)}
       {...props}
     />
   )
@@ -39,7 +39,7 @@ const CardDescription = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HT
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn(styles.description, className)}
+      className={cn("text-sm text-gray-500 dark:text-gray-400", styles.descModule, className)}
       {...props}
     />
   )
@@ -48,7 +48,7 @@ CardDescription.displayName = 'CardDescription';
 
 const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn(styles.content, className)} {...props} />
+    <div ref={ref} className={cn("p-6 pt-0", styles.contentModule, className)} {...props} />
   )
 );
 CardContent.displayName = 'CardContent';
@@ -57,7 +57,7 @@ const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn(styles.footer, className)}
+      className={cn("flex items-center p-6 pt-0", styles.footerModule, className)}
       {...props}
     />
   )

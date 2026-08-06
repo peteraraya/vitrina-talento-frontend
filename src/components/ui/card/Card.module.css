@@ -1,7 +1,7 @@
 @reference "../../../app/globals.css";
 
 .card {
-  @apply rounded-xl border bg-card text-card-foreground shadow;
+  @apply rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#161616] text-gray-900 dark:text-gray-100 shadow-sm;
 }
 
 .header {
@@ -13,7 +13,7 @@
 }
 
 .description {
-  @apply text-sm text-muted-foreground;
+  @apply text-sm text-gray-500 dark:text-gray-400;
 }
 
 .content {

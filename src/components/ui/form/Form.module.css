@@ -5,13 +5,13 @@
 }
 
 .labelError {
-  @apply text-destructive;
+  @apply text-red-500 dark:text-red-400;
 }
 
 .description {
-  @apply text-[0.8rem] text-muted-foreground;
+  @apply text-[0.8rem] text-gray-500 dark:text-gray-400;
 }
 
 .message {
-  @apply text-[0.8rem] font-medium text-destructive;
+  @apply text-[0.8rem] font-medium text-red-500 dark:text-red-400;
 }
