@@ -6,9 +6,16 @@ export const profileSchema = z.object({
   summary: z.string().optional(),
   location: z.string().optional(),
   yearsOfExperience: z.coerce.number().min(0, 'Debe ser un número positivo').optional(),
+  videoPitchUrl: z.string().url('Debe ser una URL válida').or(z.literal('')).optional(),
+  phoneNumber: z.string().optional(),
+  whatsappNumber: z.string().optional(),
+  contactEmail: z.string().email('Debe ser un correo válido').or(z.literal('')).optional(),
   githubUrl: z.string().url('Debe ser una URL válida').or(z.literal('')).optional(),
   linkedinUrl: z.string().url('Debe ser una URL válida').or(z.literal('')).optional(),
   portfolioUrl: z.string().url('Debe ser una URL válida').or(z.literal('')).optional(),
+  instagramUrl: z.string().url('Debe ser una URL válida').or(z.literal('')).optional(),
+  twitterUrl: z.string().url('Debe ser una URL válida').or(z.literal('')).optional(),
+  facebookUrl: z.string().url('Debe ser una URL válida').or(z.literal('')).optional(),
   languages: z.array(z.object({
     name: z.string().min(1, 'Obligatorio'),
     level: z.string().min(1, 'Obligatorio'),
@@ -23,6 +30,23 @@ export const profileSchema = z.object({
     issuer: z.string().min(1, 'Obligatorio'),
     credentialUrl: z.string().optional(),
   })).optional(),
+  portfolioItems: z.array(z.object({
+    title: z.string().min(1, 'Obligatorio'),
+    description: z.string().optional(),
+    imageUrl: z.string().url('Debe ser una URL válida').or(z.literal('')).optional(),
+    projectUrl: z.string().url('Debe ser una URL válida').or(z.literal('')).optional(),
+  })).optional(),
+  references: z.array(z.object({
+    name: z.string().min(1, 'Obligatorio'),
+    company: z.string().optional(),
+    phoneNumber: z.string().optional(),
+    email: z.string().email('Debe ser un correo válido').or(z.literal('')).optional(),
+    relationship: z.string().optional(),
+  })).optional(),
+  licenses: z.array(z.object({
+    name: z.string().min(1, 'Obligatorio'),
+  })).optional(),
+  skills: z.array(z.string()).optional(),
 });
 
 export const visibilitySchema = z.object({
@@ -36,6 +60,10 @@ export const availabilitySchema = z.object({
   expectedSalaryMin: z.coerce.number().optional(),
   expectedSalaryMax: z.coerce.number().optional(),
   currency: z.string().optional(),
+  salaryPeriod: z.enum(['HOURLY', 'DAILY', 'WEEKLY', 'MONTHLY', 'PROJECT_BASED']).optional(),
+  willingToTravel: z.boolean().optional(),
+  shiftWork: z.boolean().optional(),
+  nightShift: z.boolean().optional(),
 });
 
 export type ProfileFormValues = z.infer<typeof profileSchema>;
