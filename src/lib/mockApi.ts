@@ -15,13 +15,24 @@ let DUMMY_PROFILE = {
   summary: 'Apasionado por React y Next.js. Creando interfaces hermosas. Me enfoco en rendimiento y escalabilidad.',
   location: 'Santiago, Chile',
   yearsOfExperience: 5,
+  videoPitchUrl: '',
+  phoneNumber: '',
+  whatsappNumber: '+56912345678',
+  contactEmail: 'contacto@juanperez.com',
   githubUrl: 'https://github.com',
   linkedinUrl: 'https://linkedin.com',
   portfolioUrl: 'https://mi-portfolio.com',
+  instagramUrl: '',
+  twitterUrl: '',
+  facebookUrl: '',
   visibility: 'ANONYMIZED',
   languages: [{ name: 'Inglés', level: 'Avanzado' }, { name: 'Español', level: 'Nativo' }],
   educations: [{ institution: 'Universidad de Mock', degree: 'Ingeniería', fieldOfStudy: 'Software' }],
   certifications: [{ name: 'AWS Certified', issuer: 'Amazon', credentialUrl: '' }],
+  portfolioItems: [{ title: 'Sistema ERP', description: 'Sistema de ventas construido con Next.js', imageUrl: '', projectUrl: '' }],
+  references: [{ name: 'Carlos Díaz', company: 'Tech Corp', phoneNumber: '+56900000000', email: '', relationship: 'Ex-Jefe' }],
+  licenses: [{ name: 'Licencia Scrum Master' }],
+  skills: ['React', 'Next.js', 'TypeScript', 'Liderazgo'],
 };
 
 let DUMMY_AVAILABILITY = {
@@ -31,6 +42,10 @@ let DUMMY_AVAILABILITY = {
   expectedSalaryMin: 3000,
   expectedSalaryMax: 5000,
   currency: 'USD',
+  salaryPeriod: 'MONTHLY',
+  willingToTravel: false,
+  shiftWork: false,
+  nightShift: false,
 };
 
 const createMockResponse = (body: any, status = 200) => {

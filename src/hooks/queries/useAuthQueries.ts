@@ -4,6 +4,7 @@ import { API_ROUTES } from '@/config/api.config';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'next/navigation';
 import { LoginFormValues, RegisterFormValues } from '@/schemas/auth.schema';
+import { toast } from 'sonner';
 
 /**
  * Custom Hook que encapsula la capa de acceso a datos para flujos de autenticación.
@@ -29,6 +30,7 @@ export function useAuthQueries() {
     },
     onSuccess: (data) => {
       setAuth(data.accessToken);
+      toast.success('¡Inicio de sesión exitoso!');
       router.push('/dashboard');
     },
   });
@@ -40,11 +42,26 @@ export function useAuthQueries() {
         body: JSON.stringify(values),
       });
 
-      if (!res.ok) throw new Error('Fallo en el registro');
+      if (!res.ok) {
+        if (res.status === 409) {
+          throw new Error('Este correo ya se encuentra registrado. Por favor, intenta iniciar sesión.');
+        }
+        // Intentar parsear el JSON en caso de que vengan arrays de errores de validación de NestJS
+        try {
+          const errorData = await res.json();
+          if (errorData.message && Array.isArray(errorData.message)) {
+            throw new Error(errorData.message.join(', '));
+          }
+        } catch (e) {
+          // Ignorar fallo al parsear json
+        }
+        throw new Error('Fallo en el registro');
+      }
       return res.json();
     },
     onSuccess: (data) => {
       setAuth(data.accessToken);
+      toast.success('¡Registro completado con éxito!');
       router.push('/dashboard');
     },
   });

@@ -12,10 +12,10 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const resolvedParams = await params;
   const domain = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
-  const imageUrl = `${domain}/api/og/${resolvedParams.slug}?template=minimal`;
+  const imageUrl = `${domain}/api/og?slug=${resolvedParams.slug}`;
 
   return {
-    title: `Perfil Profesional | Vitrina Talento`,
+    title: `Perfil Profesional | Vitrina tu Empleo`,
     description: `Revisa la disponibilidad de este profesional.`,
     openGraph: {
       images: [imageUrl],
@@ -42,9 +42,12 @@ export default async function PublicProfilePage({ params }: Props) {
       skills: [{ skill: { name: 'React' } }, { skill: { name: 'Next.js' } }],
     };
   } else {
+    // Normalizamos la URL base eliminando barras finales
+    const baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+
     // Try to fetch full profile data (for rendering the public page)
-    const res = await fetch(`${API_URL}/api/v1/profiles/${resolvedParams.slug}`, {
-      next: { revalidate: 60 },
+    const res = await fetch(`${baseUrl}/profiles/${resolvedParams.slug}`, {
+      cache: 'no-store',
     });
 
     if (!res.ok) {

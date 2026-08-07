@@ -6,15 +6,19 @@ import { useEffect, useState } from 'react';
 import { Button, Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui';
 import { Navbar, Footer } from '@/components/layout';
 import { fetchApi } from '@/lib/api';
-import { Eye, Share2, TrendingUp, User, LogOut, ExternalLink, Settings } from 'lucide-react';
+import { API_ROUTES } from '@/config/api.config';
+import { Eye, Share2, TrendingUp, User, LogOut, ExternalLink, Settings, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
-  const { isAuthenticated, logout } = useAuthStore();
+  const { isAuthenticated, logout, _hasHydrated } = useAuthStore();
   const router = useRouter();
   const [stats, setStats] = useState<{ totalThisWeek: number, byChannel: any[] } | null>(null);
   const [profileData, setProfileData] = useState<any>(null);
 
   useEffect(() => {
+    if (!_hasHydrated) return; // Esperar a que Zustand lea el localStorage
+
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -25,7 +29,7 @@ export default function DashboardPage() {
       .then(data => setStats(data))
       .catch(console.error);
       
-    fetchApi('/profiles/me')
+    fetchApi(API_ROUTES.PROFILE.ME)
       .then(res => res.json())
       .then(data => setProfileData(data))
       .catch(console.error);
@@ -45,13 +49,31 @@ export default function DashboardPage() {
 
   const completeness = calculateCompleteness();
 
-  if (!isAuthenticated) return null;
+  if (!_hasHydrated || !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0A0A0A]">
+        <Navbar />
+        <main className="flex-1 container mx-auto px-4 py-8 lg:py-12 max-w-6xl space-y-10">
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <Skeleton className="h-32 w-full rounded-2xl" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Skeleton className="h-32 w-full rounded-2xl" />
+            <Skeleton className="h-32 w-full rounded-2xl" />
+            <Skeleton className="h-32 w-full rounded-2xl" />
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0A0A0A] transition-colors duration-300">
       <Navbar />
 
-      <main className="flex-1 container mx-auto px-4 py-8 lg:py-12 max-w-6xl">
+      <main className="flex-1 container mx-auto px-4 py-8 lg:py-12 max-w-6xl animate-in fade-in duration-500">
         {/* Welcome Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
           <div>
@@ -187,7 +209,7 @@ export default function DashboardPage() {
           </button>
 
           <button 
-            onClick={() => router.push('/talento/mock-slug')}
+            onClick={() => router.push(profileData?.slug ? `/talento/${profileData.slug}` : '/profile')}
             className="group flex flex-col items-start p-6 bg-white dark:bg-[#161616] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all text-left"
           >
             <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-xl mb-4 group-hover:scale-110 transition-transform">

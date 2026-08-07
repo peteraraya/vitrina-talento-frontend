@@ -10,7 +10,7 @@ export function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2">
             <Briefcase className="h-6 w-6 text-blue-600 dark:text-blue-500" />
-            <span className="font-bold text-xl text-gray-900 dark:text-white">Vitrina Talento</span>
+            <span className="font-bold text-xl text-gray-900 dark:text-white">Vitrina tu Empleo</span>
           </div>
           <div className="flex gap-6 text-sm text-gray-600 dark:text-gray-400 font-medium">
             <Link href="#" className="hover:text-blue-600 dark:hover:text-blue-400">Términos</Link>
@@ -19,7 +19,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-500">
-          &copy; {new Date().getFullYear()} Vitrina Talento. Todos los derechos reservados.
+          &copy; {new Date().getFullYear()} Vitrina tu Empleo. Todos los derechos reservados.
         </div>
       </div>
     </footer>

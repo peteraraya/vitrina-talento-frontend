@@ -9,12 +9,13 @@ import { Copy, CheckCircle2, ArrowLeft, Download, Share2 } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
 
 export default function ShareCardPage() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
 
   useEffect(() => {
+    if (!_hasHydrated) return;
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -23,12 +24,12 @@ export default function ShareCardPage() {
       .then(res => res.json())
       .then(data => setProfileData(data))
       .catch(console.error);
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, _hasHydrated]);
 
-  const mockSlug = 'mock-slug';
+  const userSlug = profileData?.slug || 'mock-slug';
   const domain = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001';
-  const publicUrl = `${domain}/talento/${mockSlug}`;
-  const ogImageUrl = `/api/og/${mockSlug}?template=bold`;
+  const publicUrl = `${domain}/talento/${userSlug}`;
+  const ogImageUrl = `/api/og?slug=${userSlug}&t=${Date.now()}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(publicUrl);
@@ -36,7 +37,9 @@ export default function ShareCardPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (!isAuthenticated || !profileData) return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
+  if (!_hasHydrated || !isAuthenticated || !profileData) {
+    return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0A0A0A] transition-colors duration-300">
@@ -98,7 +101,7 @@ export default function ShareCardPage() {
                     <Button 
                       variant="outline" 
                       className="w-full gap-2 text-[#25D366] border-[#25D366]/20 hover:bg-[#25D366]/5"
-                      onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Echa un vistazo a mi perfil profesional en Vitrina Talento! ${publicUrl}`)}`, '_blank')}
+                      onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Echa un vistazo a mi perfil profesional en Vitrina tu Empleo! ${publicUrl}`)}`, '_blank')}
                     >
                       Compartir en WhatsApp
                     </Button>

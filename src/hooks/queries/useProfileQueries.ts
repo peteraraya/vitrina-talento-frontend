@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchApi } from '@/lib/api';
 import { API_ROUTES } from '@/config/api.config';
 import { useAuthStore } from '@/store/useAuthStore';
+import { toast } from 'sonner';
 import { 
   ProfileFormValues, 
   VisibilityFormValues, 
@@ -61,11 +62,6 @@ export function useProfileQueries() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile', 'me'] });
-      alert('¡Perfil actualizado con éxito!');
-    },
-    onError: (err) => {
-      if (err instanceof Error) alert(err.message);
-      else alert('Ocurrió un error desconocido');
     },
   });
 
@@ -81,11 +77,6 @@ export function useProfileQueries() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile', 'me'] });
-      alert('¡Visibilidad actualizada con éxito!');
-    },
-    onError: (err) => {
-      if (err instanceof Error) alert(err.message);
-      else alert('Ocurrió un error desconocido');
     },
   });
 
@@ -101,11 +92,6 @@ export function useProfileQueries() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['availability', 'me'] });
-      alert('¡Disponibilidad actualizada con éxito!');
-    },
-    onError: (err) => {
-      if (err instanceof Error) alert(err.message);
-      else alert('Ocurrió un error desconocido');
     },
   });
 
