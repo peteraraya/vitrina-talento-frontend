@@ -5,91 +5,44 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchApi } from '@/lib/api';
+import { useProfileQueries } from '@/hooks/queries/useProfileQueries';
+import { 
+  profileSchema, visibilitySchema, availabilitySchema,
+  ProfileFormValues, VisibilityFormValues, AvailabilityFormValues
+} from '@/schemas/profile.schema';
+import { Navbar, Footer } from '@/components/layout';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-
-const profileSchema = z.object({
-  displayName: z.string().min(2, 'Name must be at least 2 characters').optional(),
-  headline: z.string().min(5, 'Headline is too short').optional(),
-  summary: z.string().optional(),
-  location: z.string().optional(),
-  yearsOfExperience: z.coerce.number().min(0, 'Must be a positive number').optional(),
-  languages: z.array(z.object({
-    name: z.string().min(1),
-    level: z.string().min(1),
-  })).optional(),
-  educations: z.array(z.object({
-    institution: z.string().min(1),
-    degree: z.string().min(1),
-    fieldOfStudy: z.string().optional(),
-  })).optional(),
-  certifications: z.array(z.object({
-    name: z.string().min(1),
-    issuer: z.string().min(1),
-    credentialUrl: z.string().optional(),
-  })).optional(),
-});
-
-const visibilitySchema = z.object({
-  visibility: z.enum(['PUBLIC', 'ANONYMIZED', 'PRIVATE']),
-});
-
-const availabilitySchema = z.object({
-  status: z.enum(['IMMEDIATE', 'TWO_WEEKS', 'ONE_MONTH', 'NOT_LOOKING']),
-  workMode: z.enum(['REMOTE', 'HYBRID', 'ONSITE']),
-  contractType: z.enum(['FULL_TIME', 'PART_TIME', 'FREELANCE', 'CONTRACT']),
-  expectedSalaryMin: z.coerce.number().optional(),
-  expectedSalaryMax: z.coerce.number().optional(),
-  currency: z.string().optional(),
-});
+import { Button } from '@/components/ui';
+import { 
+  VisibilitySettings, 
+  AvailabilitySettings, 
+  ProfileDetailsForm 
+} from '@/components/features/profile';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProfilePage() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
   const router = useRouter();
-  const queryClient = useQueryClient();
+  
+  const { 
+    profileQuery, 
+    availabilityQuery, 
+    updateProfileMutation, 
+    updateVisibilityMutation, 
+    updateAvailabilityMutation 
+  } = useProfileQueries();
+
+  const { data: profile, isLoading } = profileQuery;
+  const { data: availability, isLoading: isAvailabilityLoading } = availabilityQuery;
 
   useEffect(() => {
+    if (!_hasHydrated) return;
     if (!isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, _hasHydrated]);
 
-  // Fetch Profile Data
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ['profile', 'me'],
-    queryFn: async () => {
-      const res = await fetchApi('/profiles/me');
-      if (!res.ok) {
-        if (res.status === 404) {
-          await fetchApi('/profiles', { method: 'POST' });
-          const retryRes = await fetchApi('/profiles/me');
-          return retryRes.json();
-        }
-        throw new Error('Failed to fetch profile');
-      }
-      return res.json();
-    },
-    enabled: isAuthenticated,
-  });
-
-  // Fetch Availability Data
-  const { data: availability, isLoading: isAvailabilityLoading } = useQuery({
-    queryKey: ['availability', 'me'],
-    queryFn: async () => {
-      const res = await fetchApi('/availability/me');
-      if (!res.ok) throw new Error('Failed to fetch availability');
-      return res.json();
-    },
-    enabled: isAuthenticated,
-  });
-
-  const form = useForm<z.infer<typeof profileSchema>>({
+  const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       displayName: '',
@@ -107,14 +60,14 @@ export default function ProfilePage() {
   const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({ control: form.control, name: "educations" });
   const { fields: certFields, append: appendCert, remove: removeCert } = useFieldArray({ control: form.control, name: "certifications" });
 
-  const visibilityForm = useForm<z.infer<typeof visibilitySchema>>({
+  const visibilityForm = useForm<VisibilityFormValues>({
     resolver: zodResolver(visibilitySchema),
     defaultValues: {
       visibility: 'ANONYMIZED',
     },
   });
 
-  const availabilityForm = useForm<z.infer<typeof availabilitySchema>>({
+  const availabilityForm = useForm<AvailabilityFormValues>({
     resolver: zodResolver(availabilitySchema),
     defaultValues: {
       status: 'NOT_LOOKING',
@@ -129,15 +82,35 @@ export default function ProfilePage() {
   // Hydrate forms when data is loaded
   useEffect(() => {
     if (profile) {
+      // Normalizar skills para soportar tanto formato plano (nuevo) como anidado (antiguo/Prisma)
+      let parsedSkills: string[] = [];
+      if (Array.isArray(profile.skills)) {
+        parsedSkills = profile.skills.map((s: any) => typeof s === 'string' ? s : s.skill?.name || s.name || '');
+      }
+
       form.reset({
         displayName: profile.displayName || '',
         headline: profile.headline || '',
         summary: profile.summary || '',
         location: profile.location || '',
         yearsOfExperience: profile.yearsOfExperience || 0,
+        videoPitchUrl: profile.videoPitchUrl || '',
+        phoneNumber: profile.phoneNumber || '',
+        whatsappNumber: profile.whatsappNumber || '',
+        contactEmail: profile.contactEmail || '',
+        githubUrl: profile.githubUrl || '',
+        linkedinUrl: profile.linkedinUrl || '',
+        portfolioUrl: profile.portfolioUrl || '',
+        instagramUrl: profile.instagramUrl || '',
+        twitterUrl: profile.twitterUrl || '',
+        facebookUrl: profile.facebookUrl || '',
         languages: profile.languages || [],
         educations: profile.educations || [],
         certifications: profile.certifications || [],
+        portfolioItems: profile.portfolioItems || [],
+        references: profile.references || [],
+        licenses: profile.licenses || [],
+        skills: parsedSkills,
       });
       visibilityForm.reset({
         visibility: profile.visibility || 'ANONYMIZED',
@@ -151,450 +124,89 @@ export default function ProfilePage() {
         expectedSalaryMin: availability.expectedSalaryMin || 0,
         expectedSalaryMax: availability.expectedSalaryMax || 0,
         currency: availability.currency || 'USD',
+        salaryPeriod: availability.salaryPeriod || 'MONTHLY',
+        willingToTravel: availability.willingToTravel || false,
+        shiftWork: availability.shiftWork || false,
+        nightShift: availability.nightShift || false,
       });
     }
   }, [profile, availability, form, visibilityForm, availabilityForm]);
 
-  // Mutation for Profile Update
-  const updateProfileMutation = useMutation({
-    mutationFn: async (values: z.infer<typeof profileSchema>) => {
-      const res = await fetchApi('/profiles/me', {
-        method: 'PATCH',
-        body: JSON.stringify(values),
-      });
-      if (!res.ok) throw new Error('Failed to update profile');
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile', 'me'] });
-      alert('Profile updated successfully!');
-    },
-    onError: (err) => {
-      if (err instanceof Error) alert(err.message);
-      else alert('An error occurred');
-    },
-  });
-
-  // Mutation for Visibility Update
-  const updateVisibilityMutation = useMutation({
-    mutationFn: async (values: z.infer<typeof visibilitySchema>) => {
-      const res = await fetchApi('/profiles/me/visibility', {
-        method: 'PATCH',
-        body: JSON.stringify(values),
-      });
-      if (!res.ok) throw new Error('Failed to update visibility');
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile', 'me'] });
-      alert('Visibility updated successfully!');
-    },
-    onError: (err) => {
-      if (err instanceof Error) alert(err.message);
-      else alert('An error occurred');
-    },
-  });
-
-  // Mutation for Availability Update
-  const updateAvailabilityMutation = useMutation({
-    mutationFn: async (values: z.infer<typeof availabilitySchema>) => {
-      const res = await fetchApi('/availability/me', {
-        method: 'PATCH',
-        body: JSON.stringify(values),
-      });
-      if (!res.ok) throw new Error('Failed to update availability');
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['availability', 'me'] });
-      alert('Availability updated successfully!');
-    },
-    onError: (err) => {
-      if (err instanceof Error) alert(err.message);
-      else alert('An error occurred');
-    },
-  });
-
-  if (!isAuthenticated || isLoading || isAvailabilityLoading) return <div className="p-8">Loading...</div>;
+  if (!_hasHydrated || !isAuthenticated || isLoading || isAvailabilityLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0A0A0A]">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8 lg:py-12 flex-1 max-w-6xl">
+          <div className="flex flex-col md:flex-row gap-8 lg:gap-12">
+            <div className="w-full md:w-64 shrink-0 space-y-6">
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-32 w-full mt-8" />
+            </div>
+            <div className="flex-1 space-y-10">
+              <Skeleton className="h-96 w-full rounded-2xl" />
+              <Skeleton className="h-64 w-full rounded-2xl" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-8 max-w-3xl">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Mi Perfil</h1>
-        <Button variant="outline" onClick={() => router.push('/dashboard')}>Volver</Button>
-      </div>
-
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Configuración de Visibilidad</CardTitle>
-          <CardDescription>
-            Controla quién puede ver tu perfil. El estado ANONYMIZED es recomendado en Vitrina Talento.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...visibilityForm}>
-            <form
-              onSubmit={visibilityForm.handleSubmit((v) => updateVisibilityMutation.mutate(v))}
-              className="flex items-end gap-4"
-            >
-              <FormField
-                control={visibilityForm.control}
-                name="visibility"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>Visibilidad</FormLabel>
-                    <FormControl>
-                      <select
-                        {...field}
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <option value="PUBLIC">Público (Indexado en buscadores)</option>
-                        <option value="ANONYMIZED">Anonimizado (Recomendado)</option>
-                        <option value="PRIVATE">Privado (No visible)</option>
-                      </select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" disabled={updateVisibilityMutation.isPending}>
-                Guardar
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Disponibilidad Laboral</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...availabilityForm}>
-            <form onSubmit={availabilityForm.handleSubmit((v) => updateAvailabilityMutation.mutate(v))} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={availabilityForm.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estado</FormLabel>
-                      <FormControl>
-                        <select
-                          {...field}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <option value="IMMEDIATE">Inmediata</option>
-                          <option value="TWO_WEEKS">2 Semanas</option>
-                          <option value="ONE_MONTH">1 Mes</option>
-                          <option value="NOT_LOOKING">No busco</option>
-                        </select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={availabilityForm.control}
-                  name="workMode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Modalidad</FormLabel>
-                      <FormControl>
-                        <select
-                          {...field}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <option value="REMOTE">Remoto</option>
-                          <option value="HYBRID">Híbrido</option>
-                          <option value="ONSITE">Presencial</option>
-                        </select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={availabilityForm.control}
-                  name="contractType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de Contrato</FormLabel>
-                      <FormControl>
-                        <select
-                          {...field}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <option value="FULL_TIME">Full Time</option>
-                          <option value="PART_TIME">Part Time</option>
-                          <option value="FREELANCE">Freelance</option>
-                          <option value="CONTRACT">Contrato Fijo</option>
-                        </select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={availabilityForm.control}
-                  name="currency"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Moneda (Ej: USD)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej. USD, CLP, EUR" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={availabilityForm.control}
-                  name="expectedSalaryMin"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Salario Min (Mensual)</FormLabel>
-                      <FormControl>
-                        <Input type="number" min="0" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={availabilityForm.control}
-                  name="expectedSalaryMax"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Salario Max (Mensual)</FormLabel>
-                      <FormControl>
-                        <Input type="number" min="0" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+    <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0A0A0A] transition-colors duration-300">
+      <Navbar />
+      <div className="container mx-auto px-4 py-8 lg:py-12 flex-1 max-w-6xl animate-in fade-in duration-500">
+        <div className="flex flex-col md:flex-row gap-8 lg:gap-12">
+          
+          {/* Sidebar Navigation */}
+          <div className="w-full md:w-64 shrink-0">
+            <div className="sticky top-24 space-y-6">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Mi Perfil</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                  Gestiona tu currículum, expectativas salariales y privacidad.
+                </p>
               </div>
-
-              <Button type="submit" className="w-full mt-4" disabled={updateAvailabilityMutation.isPending}>
-                {updateAvailabilityMutation.isPending ? 'Guardando...' : 'Guardar Disponibilidad'}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Datos Completos del Perfil</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit((v) => updateProfileMutation.mutate(v))} className="space-y-6">
               
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Básicos</h3>
-                <FormField
-                  control={form.control}
-                  name="displayName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nombre para mostrar</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej. Juan Pérez" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <nav className="flex flex-col gap-1 hidden md:flex">
+                <a href="#datos" onClick={(e) => { e.preventDefault(); document.getElementById('datos')?.scrollIntoView({ behavior: 'smooth' }); }} className="px-4 py-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium rounded-xl transition-colors">
+                  Datos Personales
+                </a>
+                <a href="#disponibilidad" onClick={(e) => { e.preventDefault(); document.getElementById('disponibilidad')?.scrollIntoView({ behavior: 'smooth' }); }} className="px-4 py-2.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-gray-200 font-medium rounded-xl transition-colors">
+                  Disponibilidad
+                </a>
+                <a href="#visibilidad" onClick={(e) => { e.preventDefault(); document.getElementById('visibilidad')?.scrollIntoView({ behavior: 'smooth' }); }} className="px-4 py-2.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-gray-200 font-medium rounded-xl transition-colors">
+                  Privacidad
+                </a>
+              </nav>
 
-                <FormField
-                  control={form.control}
-                  name="headline"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Titular profesional</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej. Desarrollador Frontend React" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="summary"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Resumen (Bio)</FormLabel>
-                      <FormControl>
-                        <textarea
-                          {...field}
-                          className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          placeholder="Breve resumen de tu perfil profesional..."
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Ubicación</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ej. Santiago, Chile" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="yearsOfExperience"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Años de experiencia</FormLabel>
-                        <FormControl>
-                          <Input type="number" min="0" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
+                <Button variant="outline" className="w-full justify-start text-gray-600 dark:text-gray-400" onClick={() => router.push('/dashboard')}>
+                  &larr; Volver al Dashboard
+                </Button>
               </div>
+            </div>
+          </div>
 
-              {/* Idiomas */}
-              <div className="space-y-4 pt-4 border-t">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Idiomas</h3>
-                  <Button type="button" variant="outline" size="sm" onClick={() => appendLang({ name: '', level: 'Básico' })}>+ Agregar Idioma</Button>
-                </div>
-                {langFields.map((field, index) => (
-                  <div key={field.id} className="flex gap-4 items-end">
-                    <FormField
-                      control={form.control}
-                      name={`languages.${index}.name`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>Idioma</FormLabel>
-                          <FormControl><Input placeholder="Inglés" {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`languages.${index}.level`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>Nivel</FormLabel>
-                          <FormControl>
-                            <select {...field} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
-                              <option value="Básico">Básico</option>
-                              <option value="Intermedio">Intermedio</option>
-                              <option value="Avanzado">Avanzado</option>
-                              <option value="Nativo">Nativo</option>
-                            </select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="button" variant="destructive" onClick={() => removeLang(index)}>X</Button>
-                  </div>
-                ))}
-              </div>
-
-              {/* Estudios */}
-              <div className="space-y-4 pt-4 border-t">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Educación</h3>
-                  <Button type="button" variant="outline" size="sm" onClick={() => appendEdu({ institution: '', degree: '', fieldOfStudy: '' })}>+ Agregar Estudio</Button>
-                </div>
-                {eduFields.map((field, index) => (
-                  <div key={field.id} className="flex gap-4 items-end">
-                    <FormField
-                      control={form.control}
-                      name={`educations.${index}.institution`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>Institución</FormLabel>
-                          <FormControl><Input placeholder="Universidad..." {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`educations.${index}.degree`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>Título</FormLabel>
-                          <FormControl><Input placeholder="Ingeniero..." {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="button" variant="destructive" onClick={() => removeEdu(index)}>X</Button>
-                  </div>
-                ))}
-              </div>
-
-              {/* Certificaciones */}
-              <div className="space-y-4 pt-4 border-t">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Certificaciones</h3>
-                  <Button type="button" variant="outline" size="sm" onClick={() => appendCert({ name: '', issuer: '', credentialUrl: '' })}>+ Agregar Certificado</Button>
-                </div>
-                {certFields.map((field, index) => (
-                  <div key={field.id} className="flex gap-4 items-end">
-                    <FormField
-                      control={form.control}
-                      name={`certifications.${index}.name`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>Nombre</FormLabel>
-                          <FormControl><Input placeholder="AWS Certified..." {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`certifications.${index}.issuer`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>Emisor</FormLabel>
-                          <FormControl><Input placeholder="Amazon..." {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="button" variant="destructive" onClick={() => removeCert(index)}>X</Button>
-                  </div>
-                ))}
-              </div>
-
-              <Button type="submit" className="w-full mt-4" disabled={updateProfileMutation.isPending}>
-                {updateProfileMutation.isPending ? 'Guardando...' : 'Guardar Todo el Perfil'}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+          {/* Main Content Area */}
+          <div className="flex-1 space-y-10 pb-20">
+            <div id="datos" className="scroll-mt-24">
+              <ProfileDetailsForm form={form} mutation={updateProfileMutation} />
+            </div>
+            
+            <div id="disponibilidad" className="scroll-mt-24">
+              <AvailabilitySettings form={availabilityForm} mutation={updateAvailabilityMutation} />
+            </div>
+            
+            <div id="visibilidad" className="scroll-mt-24">
+              <VisibilitySettings form={visibilityForm} mutation={updateVisibilityMutation} />
+            </div>
+          </div>
+          
+        </div>
+      </div>
+      <Footer />
     </div>
   );
 }

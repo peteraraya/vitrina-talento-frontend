@@ -13,11 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vitrina Talento",
+  title: "Vitrina tu Empleo",
   description: "Plataforma para mostrar talento disponible",
 };
 
 import Providers from "./providers";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function RootLayout({
   children,
@@ -28,9 +29,11 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
+        <Toaster position="top-center" />
       </body>
     </html>
   );

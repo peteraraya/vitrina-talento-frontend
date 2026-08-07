@@ -3,121 +3,156 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useAuthStore } from '@/store/useAuthStore';
-import { fetchApi } from '@/lib/api';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-
-const registerSchema = z.object({
-  email: z.string().email({ message: 'Invalid email address' }),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters long' }),
-  role: z.enum(['CANDIDATE', 'RECRUITER']),
-});
+import { registerSchema, RegisterFormValues } from '@/schemas/auth.schema';
+import { useAuthQueries } from '@/hooks/queries/useAuthQueries';
+import { Navbar, Footer } from '@/components/layout';
+import { Eye, EyeOff } from 'lucide-react';
+import {
+  Card, CardContent, CardDescription, CardHeader, CardTitle,
+  Input, Button, Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
+  Select
+} from '@/components/ui';
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const setAuth = useAuthStore((state) => state.setAuth);
-  const [error, setError] = useState('');
+  const { registerMutation } = useAuthQueries();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const form = useForm<z.infer<typeof registerSchema>>({
+  const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
+    mode: "onChange",
     defaultValues: {
       email: '',
       password: '',
+      passwordConfirm: '',
       role: 'CANDIDATE',
     },
   });
 
-  async function onSubmit(values: z.infer<typeof registerSchema>) {
-    try {
-      const res = await fetchApi('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(values),
-      });
-
-      if (!res.ok) {
-        throw new Error('Registration failed');
-      }
-
-      const data = await res.json();
-      setAuth(data.accessToken);
-      router.push('/dashboard');
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unknown error occurred');
-      }
-    }
+  function onSubmit(values: RegisterFormValues) {
+    registerMutation.mutate(values);
   }
 
+  const isFormValid = form.formState.isValid;
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <Card className="w-[400px]">
-        <CardHeader>
-          <CardTitle>Register</CardTitle>
-          <CardDescription>Create a new account</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="email@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+    <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0A0A0A] transition-colors duration-300">
+      <Navbar />
+      <div className="flex flex-1 items-center justify-center p-4">
+        <Card className="w-full max-w-[400px]">
+          <CardHeader>
+            <CardTitle>Registro</CardTitle>
+            <CardDescription>Crea una nueva cuenta en la plataforma</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="email@ejemplo.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contraseña</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input 
+                            type={showPassword ? "text" : "password"} 
+                            placeholder="********" 
+                            {...field} 
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="passwordConfirm"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirmar Contraseña</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input 
+                            type={showConfirmPassword ? "text" : "password"} 
+                            placeholder="********" 
+                            {...field} 
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          >
+                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo de cuenta</FormLabel>
+                      <FormControl>
+                        <Select {...field}>
+                          <option value="CANDIDATE">Candidato</option>
+                          <option value="RECRUITER">Reclutador</option>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {registerMutation.isError && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                    <p className="text-sm text-red-600 dark:text-red-400 font-medium text-center">
+                      {registerMutation.error instanceof Error ? registerMutation.error.message : 'Error desconocido'}
+                    </p>
+                  </div>
                 )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="********" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>I am a</FormLabel>
-                    <FormControl>
-                      <select
-                        {...field}
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <option value="CANDIDATE">Candidate</option>
-                        <option value="RECRUITER">Recruiter</option>
-                      </select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full">
-                Register
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                
+                <Button 
+                  type="submit"
+                  variant="default"
+                  className="w-full mt-6"
+                  disabled={registerMutation.isPending || !isFormValid}
+                >
+                  {registerMutation.isPending ? 'Registrando...' : 'Registrarse'}
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
+      <Footer />
     </div>
   );
 }
