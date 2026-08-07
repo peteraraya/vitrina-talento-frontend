@@ -1,11 +1,11 @@
 <div align="center">
-  <h1>✨ Vitrina Talento - Frontend</h1>
+  <h1>✨ Vitrina tu Empleo - Frontend</h1>
   <p><em>La interfaz de usuario rápida, accesible y moderna para nuestra plataforma de conexión de talento.</em></p>
 </div>
 
 <br />
 
-Este repositorio contiene la aplicación cliente construida para **Vitrina Talento**, asegurando una experiencia fluida tanto para candidatos buscando oportunidades en modo anónimo, como para empresas buscando el talento ideal.
+Este repositorio contiene la aplicación cliente construida para **Vitrina tu Empleo**, asegurando una experiencia fluida tanto para candidatos buscando oportunidades en modo anónimo, como para empresas buscando el talento ideal.
 
 ## 🚀 Características y Arquitectura
 
@@ -16,7 +16,7 @@ graph LR;
     User((Usuario)) --> NextJS[Next.js App Router];
     NextJS --> Auth[Zustand - Auth Store];
     NextJS --> ReactQuery[TanStack React Query];
-    ReactQuery <--> API[(Vitrina Talento API / NestJS)];
+    ReactQuery <--> API[(Vitrina tu Empleo API / NestJS)];
     
     subgraph UI Components
         NextJS -.-> Shadcn[Shadcn UI];
