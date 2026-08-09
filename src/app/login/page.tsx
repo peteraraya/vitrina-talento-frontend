@@ -5,13 +5,27 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, LoginFormValues } from '@/schemas/auth.schema';
 import { useAuthQueries } from '@/hooks/queries/useAuthQueries';
 import { Navbar, Footer } from '@/components/layout';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, Suspense } from 'react';
+import Link from 'next/link';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
   Input, Button, Form, FormControl, FormField, FormItem, FormLabel, FormMessage
 } from '@/components/ui';
 
-export default function LoginPage() {
+function LoginContent() {
   const { loginMutation } = useAuthQueries();
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const role = searchParams.get('role');
+
+  useEffect(() => {
+    if (_hasHydrated && isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [_hasHydrated, isAuthenticated, router]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -23,6 +37,10 @@ export default function LoginPage() {
 
   function onSubmit(values: LoginFormValues) {
     loginMutation.mutate(values);
+  }
+
+  if (_hasHydrated && isAuthenticated) {
+    return null;
   }
 
   return (
@@ -76,6 +94,15 @@ export default function LoginPage() {
                 >
                   {loginMutation.isPending ? 'Ingresando...' : 'Ingresar'}
                 </Button>
+                <div className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                  ¿No tienes una cuenta?{' '}
+                  <Link 
+                    href={`/register${role ? `?role=${role}` : ''}`}
+                    className="font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+                  >
+                    Regístrate aquí
+                  </Link>
+                </div>
               </form>
             </Form>
           </CardContent>
@@ -83,5 +110,13 @@ export default function LoginPage() {
       </div>
       <Footer />
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Cargando...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

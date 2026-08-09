@@ -2,6 +2,8 @@ import * as z from 'zod';
 
 export const profileSchema = z.object({
   displayName: z.string().min(2, 'El nombre debe tener al menos 2 caracteres').optional(),
+  companyName: z.string().optional(),
+  website: z.string().url('Debe ser una URL válida').or(z.literal('')).optional(),
   headline: z.string().min(5, 'El titular es demasiado corto').optional(),
   summary: z.string().optional(),
   location: z.string().optional(),

@@ -6,6 +6,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema, RegisterFormValues } from '@/schemas/auth.schema';
 import { useAuthQueries } from '@/hooks/queries/useAuthQueries';
 import { Navbar, Footer } from '@/components/layout';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, Suspense } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
@@ -13,10 +16,21 @@ import {
   Select
 } from '@/components/ui';
 
-export default function RegisterPage() {
+function RegisterContent() {
   const { registerMutation } = useAuthQueries();
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlRole = searchParams.get('role');
+  const defaultRole = urlRole === 'RECRUITER' ? 'RECRUITER' : 'CANDIDATE';
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    if (_hasHydrated && isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [_hasHydrated, isAuthenticated, router]);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -25,7 +39,7 @@ export default function RegisterPage() {
       email: '',
       password: '',
       passwordConfirm: '',
-      role: 'CANDIDATE',
+      role: defaultRole,
     },
   });
 
@@ -34,6 +48,10 @@ export default function RegisterPage() {
   }
 
   const isFormValid = form.formState.isValid;
+
+  if (_hasHydrated && isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0A0A0A] transition-colors duration-300">
@@ -154,5 +172,13 @@ export default function RegisterPage() {
       </div>
       <Footer />
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Cargando...</div>}>
+      <RegisterContent />
+    </Suspense>
   );
 }

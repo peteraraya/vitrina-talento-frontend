@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Briefcase, UserCircle, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { NotificationBell } from '@/components/features/notifications/NotificationBell';
 
 import { useAuthStore } from '@/store/useAuthStore';
 import { LogOut } from 'lucide-react';
@@ -44,14 +45,17 @@ export function Navbar() {
           
           {_hasHydrated ? (
             isAuthenticated ? (
-              <Button 
-                variant="ghost" 
-                onClick={() => { logout(); router.push('/login'); }}
-                className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50"
-              >
-                <LogOut className="h-4 w-4" />
-                Cerrar Sesión
-              </Button>
+              <>
+                <NotificationBell />
+                <Button 
+                  variant="ghost" 
+                  onClick={() => { logout(); router.push('/login'); }}
+                  className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Cerrar Sesión
+                </Button>
+              </>
             ) : (
               <>
                 <Button asChild variant="ghost" className="hidden sm:flex">

@@ -1,11 +1,29 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui';
 import { Navbar, Footer } from '@/components/layout';
 import { ShieldCheck, ArrowRight, Search, Star, TrendingUp } from 'lucide-react';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function Home() {
+  const router = useRouter();
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
+
+  useEffect(() => {
+    if (_hasHydrated && isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [_hasHydrated, isAuthenticated, router]);
+
+  // Si está autenticado, podemos devolver null o mantener la UI mientras redirige
+  // Ocultamos la UI principal para evitar el "destello" si se va a redirigir
+  if (_hasHydrated && isAuthenticated) {
+    return null; 
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0A0A0A] text-[#111111] dark:text-gray-200 transition-colors duration-300">
       <Navbar />
@@ -30,13 +48,13 @@ export default function Home() {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
                 <Button asChild variant="default" size="xl" className="w-full sm:w-auto shadow-blue-600/20">
-                  <Link href="/register">
+                  <Link href="/login?role=CANDIDATE">
                     Comenzar como Candidato
                     <ArrowRight className="h-5 w-5" />
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="xl" className="w-full sm:w-auto">
-                  <Link href="/register">
+                  <Link href="/login?role=RECRUITER">
                     Soy Empresa / Reclutador
                   </Link>
                 </Button>
@@ -97,7 +115,7 @@ export default function Home() {
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">¿Listo para dar el siguiente paso?</h2>
             <p className="text-blue-100 text-xl max-w-2xl mx-auto mb-10">Únete a miles de profesionales que ya han encontrado su trabajo soñado a través de nuestra plataforma.</p>
             <Button asChild variant="light" size="xl" className="px-10">
-              <Link href="/register">
+              <Link href="/login">
                 Crear mi cuenta gratis
               </Link>
             </Button>

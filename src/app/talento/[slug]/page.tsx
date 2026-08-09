@@ -2,6 +2,11 @@ import { Metadata, ResolvingMetadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Navbar, Footer } from '@/components/layout';
 import Image from 'next/image';
+import { ArrowLeft, Mail, Bookmark, Phone, Link2 } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui';
+import { BackButton } from './BackButton';
+import { ProfileActions } from './ProfileActions';
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -28,9 +33,7 @@ export async function generateMetadata(
   };
 }
 
-import { ArrowLeft, Mail, Bookmark, Phone, Link2 } from 'lucide-react';
-import Link from 'next/link';
-import { Button } from '@/components/ui';
+import { MapPin, Briefcase, Star, Search } from 'lucide-react';
 
 export default async function PublicProfilePage({ params }: Props) {
   const resolvedParams = await params;
@@ -38,6 +41,7 @@ export default async function PublicProfilePage({ params }: Props) {
   const USE_MOCK_API = process.env.NEXT_PUBLIC_USE_MOCK_API === 'true';
   
   let profile;
+  let similarProfiles: any[] = [];
 
   if (USE_MOCK_API) {
     profile = {
@@ -63,6 +67,18 @@ export default async function PublicProfilePage({ params }: Props) {
     }
 
     profile = await res.json();
+
+    // Fetch similar profiles
+    try {
+      const similarRes = await fetch(`${baseUrl}/profiles/${resolvedParams.slug}/similar`, {
+        cache: 'no-store',
+      });
+      if (similarRes.ok) {
+        similarProfiles = await similarRes.json();
+      }
+    } catch (e) {
+      console.error('Error fetching similar profiles', e);
+    }
   }
 
   const isAnonymized = profile.visibility === 'ANONYMIZED';
@@ -76,36 +92,13 @@ export default async function PublicProfilePage({ params }: Props) {
         
         {/* Barra superior de navegación / acciones */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <Button variant="ghost" asChild className="gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white">
-            <Link href="/talento">
-              <ArrowLeft className="w-4 h-4" /> Volver al buscador
-            </Link>
-          </Button>
-          
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <Button variant="outline" className="gap-2 flex-1 sm:flex-none">
-              <Bookmark className="w-4 h-4" /> Guardar
-            </Button>
-            
-            {/* Solo mostramos contacto si NO es anónimo (o si el backend lo permite) */}
-            {!isAnonymized && profile.contactEmail ? (
-              <Button asChild className="gap-2 flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white shadow-md">
-                <a href={`mailto:${profile.contactEmail}`}>
-                  <Mail className="w-4 h-4" /> Contactar
-                </a>
-              </Button>
-            ) : !isAnonymized && profile.linkedinUrl ? (
-              <Button asChild className="gap-2 flex-1 sm:flex-none bg-[#0A66C2] hover:bg-[#0A66C2]/90 text-white shadow-md">
-                <a href={profile.linkedinUrl} target="_blank" rel="noopener noreferrer">
-                  <Link2 className="w-4 h-4" /> Ver LinkedIn
-                </a>
-              </Button>
-            ) : (
-              <Button className="gap-2 flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white shadow-md" disabled>
-                <Mail className="w-4 h-4" /> Solicitar Contacto
-              </Button>
-            )}
-          </div>
+          <BackButton />
+          <ProfileActions 
+            slug={resolvedParams.slug}
+            isAnonymized={isAnonymized} 
+            contactEmail={profile.contactEmail} 
+            linkedinUrl={profile.linkedinUrl} 
+          />
         </div>
 
         {isAnonymized && (
@@ -140,13 +133,66 @@ export default async function PublicProfilePage({ params }: Props) {
             <h2 className="text-xl font-semibold mb-4">Habilidades Principales</h2>
             <div className="flex flex-wrap gap-2">
               {profile.skills?.map((s: any) => (
-                <span key={s.skill.name} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm">
-                  {s.skill.name}
+                <span key={s.skill.name || s.name || s} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm">
+                  {s.skill.name || s.name || s}
                 </span>
               ))}
             </div>
           </div>
         </div>
+
+        {/* Similar Profiles Section */}
+        {similarProfiles && similarProfiles.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Candidatos Similares</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {similarProfiles.slice(0, 3).map((sim: any) => {
+                const simAnonymized = sim.visibility === 'ANONYMIZED';
+                const simName = simAnonymized ? 'Candidato Anónimo' : sim.displayName;
+                const simAvatar = simAnonymized ? '?' : simName?.charAt(0) || 'A';
+                
+                // Extraer el modo de trabajo y salario para la vista simplificada
+                const rawWorkMode = sim.availabilities?.[0]?.workMode || sim.workMode;
+                const workMode = rawWorkMode === 'REMOTE' ? 'Remoto' : rawWorkMode === 'HYBRID' ? 'Híbrido' : 'Presencial';
+
+                return (
+                  <Link href={`/talento/${sim.slug}`} key={sim.slug}>
+                    <div className="bg-white dark:bg-[#161616] p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md hover:border-blue-200 transition-all h-full flex flex-col">
+                      <div className="flex items-center gap-4 mb-4">
+                        {sim.profilePhotoUrl && !simAnonymized ? (
+                          <div className="relative w-12 h-12 rounded-full overflow-hidden shrink-0">
+                            <Image src={sim.profilePhotoUrl} alt={simName} fill className="object-cover" />
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-lg shrink-0">
+                            {simAvatar}
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="font-bold text-gray-900 dark:text-white line-clamp-1">{simName}</h3>
+                          <p className="text-xs text-blue-600 dark:text-blue-400 font-medium line-clamp-1">{sim.headline || 'Profesional'}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-2 mb-4 flex-1">
+                        {sim.skills?.slice(0, 3).map((s: any) => (
+                          <span key={s.skill?.name || s.name || s} className="px-2 py-0.5 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-md text-[10px] border border-gray-100 dark:border-gray-700">
+                            {s.skill?.name || s.name || s}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-100 dark:border-gray-800">
+                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {sim.location?.split(',')[0] || 'Remoto'}</span>
+                        <span className="flex items-center gap-1"><Briefcase className="w-3 h-3" /> {workMode}</span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
       <Footer />
     </div>

@@ -45,9 +45,11 @@ export default function ProfilePage() {
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
-      displayName: '',
-      headline: '',
+      defaultValues: {
+        displayName: '',
+        companyName: '',
+        website: '',
+        headline: '',
       summary: '',
       location: '',
       yearsOfExperience: 0,
@@ -109,6 +111,8 @@ export default function ProfilePage() {
 
       form.reset({
         displayName: profile.displayName || '',
+        companyName: profile.companyName || '',
+        website: profile.website || '',
         headline: profile.headline || '',
         summary: profile.summary || '',
         location: profile.location || '',

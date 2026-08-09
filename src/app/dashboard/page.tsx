@@ -7,16 +7,53 @@ import { Button, Card, CardHeader, CardTitle, CardContent, CardDescription } fro
 import { Navbar, Footer } from '@/components/layout';
 import { fetchApi } from '@/lib/api';
 import { API_ROUTES } from '@/config/api.config';
-import { Eye, Share2, TrendingUp, User, LogOut, ExternalLink, Settings, Loader2, Star, Search } from 'lucide-react';
+import { Eye, Share2, TrendingUp, User, LogOut, ExternalLink, Settings, Loader2, Star, Search, FileText, Bookmark, Code, MessageSquare, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
-  const { isAuthenticated, logout, _hasHydrated, role } = useAuthStore();
+  const { isAuthenticated, logout, _hasHydrated, role, accessToken } = useAuthStore();
   const router = useRouter();
-  const [stats, setStats] = useState<{ totalThisWeek: number, byChannel: any[] } | null>(null);
+  const [stats, setStats] = useState<{ totalThisWeek: number, byChannel: any[], searchAppearances?: number, profileViews?: number } | null>(null);
   const [profileData, setProfileData] = useState<any>(null);
+  const [completenessData, setCompletenessData] = useState<{score: number, missingItems: any[]} | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const downloadCV = async () => {
+    if (!accessToken) return;
+    try {
+      setIsDownloading(true);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api/v1';
+      const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+      
+      const response = await fetch(`${baseUrl}/profiles/me/export-pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) throw new Error('Error al generar el PDF');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'mi-cv-profesional.pdf');
+      document.body.appendChild(link);
+      link.click();
+      
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      alert('Ocurrió un problema al descargar el CV');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   useEffect(() => {
     if (!_hasHydrated) return;
@@ -52,6 +89,15 @@ export default function DashboardPage() {
       }).catch(err => {
         console.error('Error fetching profile:', err);
         setProfileData(null);
+      }),
+      fetchApi('/profiles/me/completeness').then(res => {
+        if (!res.ok) throw new Error('Completeness not found');
+        return res.json();
+      }).then(data => {
+        setCompletenessData(data);
+      }).catch(err => {
+        console.error('Error fetching completeness:', err);
+        setCompletenessData({ score: 0, missingItems: [] });
       })
     ]).finally(() => {
       setIsLoadingData(false);
@@ -59,19 +105,8 @@ export default function DashboardPage() {
 
   }, [isAuthenticated, router, _hasHydrated, role]);
 
-  // Cálculo de completitud de perfil mock
-  const calculateCompleteness = () => {
-    if (!profileData) return 0;
-    let score = 0;
-    if (profileData.displayName) score += 20;
-    if (profileData.headline) score += 20;
-    if (profileData.summary) score += 20;
-    if (profileData.skills?.length || profileData.languages?.length) score += 20;
-    if (profileData.linkedinUrl || profileData.githubUrl) score += 20;
-    return score;
-  };
-
-  const completeness = calculateCompleteness();
+  const completeness = completenessData?.score || 0;
+  const missingItems = completenessData?.missingItems || [];
 
   if (!_hasHydrated || !isAuthenticated || isLoadingData) {
     return (
@@ -93,7 +128,11 @@ export default function DashboardPage() {
     );
   }
 
-  const totalThisWeek = typeof stats?.totalThisWeek === 'number' ? stats.totalThisWeek : 0;
+  const sharesCount = typeof stats?.totalThisWeek === 'number' ? stats.totalThisWeek : 0;
+  const viewsCount = typeof stats?.profileViews === 'number' ? stats.profileViews : (profileData?.profileViews || 0);
+  const searchCount = typeof stats?.searchAppearances === 'number' ? stats.searchAppearances : (profileData?.searchAppearances || 0);
+
+  const firstName = profileData?.displayName?.split(' ')[0] || 'Talento';
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0A0A0A] transition-colors duration-300">
@@ -115,231 +154,372 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             <Button 
               variant="outline" 
+              asChild
               className="gap-2 border-gray-300 dark:border-gray-700 rounded-xl"
-              onClick={() => { logout(); router.push('/login'); }}
             >
-              <LogOut className="h-4 w-4" />
-              Cerrar sesión
+              <Link href={role === 'RECRUITER' ? '/profile' : (profileData?.slug ? `/talento/${profileData.slug}` : '/profile')}>
+                <User className="h-4 w-4" />
+                Mi Perfil
+              </Link>
             </Button>
           </div>
         </div>
         
         {role === 'RECRUITER' ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-              <Card className="border-0 shadow-md bg-white dark:bg-[#161616] overflow-hidden">
-                <div className="h-2 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Search className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Buscar Talentos
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 dark:text-gray-400 mb-6">
-                    Explora nuestra base de datos de profesionales filtrando por tecnologías, modalidad y expectativas salariales.
+          <div className="space-y-8">
+            {/* Hero / Banner Moderno para Reclutador */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900 p-8 md:p-12 shadow-2xl">
+              <div className="absolute top-0 right-0 -mt-16 -mr-16 opacity-10">
+                <svg width="400" height="400" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              
+              <div className="relative z-10 max-w-2xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-blue-200 text-sm font-medium mb-6 backdrop-blur-sm">
+                  <Star className="w-4 h-4 fill-blue-200" />
+                  Plataforma de Adquisición de Talento
+                </div>
+                <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight">
+                  Descubre hoy a tu próximo <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">gran talento</span>
+                </h2>
+                <p className="text-blue-100/80 text-lg mb-8 max-w-xl leading-relaxed">
+                  Accede a perfiles verificados, filtra por habilidades técnicas y gestiona tus candidatos favoritos desde un solo lugar.
+                </p>
+                <Button asChild size="lg" className="bg-white text-blue-900 hover:bg-gray-100 rounded-full px-8 h-12 font-semibold shadow-lg shadow-white/10 transition-all hover:scale-105">
+                  <Link href="/talento" className="gap-2">
+                    <Search className="w-5 h-5" /> Comenzar Búsqueda
+                  </Link>
+                </Button>
+              </div>
+            </div>
+
+            {/* Grid de Accesos Rápidos y Métricas Visuales */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              
+              <Card className="col-span-1 md:col-span-2 border border-gray-100 dark:border-gray-800 shadow-xl shadow-indigo-900/5 bg-white dark:bg-[#111] overflow-hidden rounded-2xl group hover:border-indigo-200 dark:hover:border-indigo-900/50 transition-all">
+                <CardContent className="p-0 flex flex-col sm:flex-row h-full">
+                  <div className="p-8 flex-1 flex flex-col justify-center">
+                    <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center mb-6 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
+                      <Briefcase className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Sistema ATS (Vacantes)</h3>
+                    <p className="text-gray-500 dark:text-gray-400 mb-6 flex-1">
+                      Crea puestos de trabajo, asigna candidatos desde el buscador y supervísalos a través de tu tablero Kanban (Sourced, Interview, Hired...).
+                    </p>
+                    <Button asChild variant="default" className="w-fit bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl">
+                      <Link href="/dashboard/jobs">Gestionar Vacantes</Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="col-span-1 md:col-span-2 border border-gray-100 dark:border-gray-800 shadow-xl shadow-blue-900/5 bg-white dark:bg-[#111] overflow-hidden rounded-2xl group hover:border-blue-200 dark:hover:border-blue-900/50 transition-all">
+                <CardContent className="p-0 flex flex-col sm:flex-row h-full">
+                  <div className="p-8 flex-1 flex flex-col justify-center">
+                    <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mb-6 text-blue-600 dark:text-blue-400 group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
+                      <Search className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Buscador Inteligente</h3>
+                    <p className="text-gray-500 dark:text-gray-400 mb-6 flex-1">
+                      Filtra candidatos por stack tecnológico, pretensión de renta, disponibilidad y modalidad de trabajo (Remoto/Presencial).
+                    </p>
+                    <Button asChild variant="outline" className="w-fit border-blue-200 text-blue-700 hover:bg-blue-50 rounded-xl">
+                      <Link href="/talento">Ir al buscador general</Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="col-span-1 md:col-span-2 border border-gray-100 dark:border-gray-800 shadow-xl shadow-amber-900/5 bg-white dark:bg-[#111] rounded-2xl group hover:border-amber-200 dark:hover:border-amber-900/50 transition-all flex flex-col">
+                <CardContent className="p-8 flex-1 flex flex-col">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 group-hover:bg-amber-600 group-hover:text-white transition-all duration-300">
+                      <MessageSquare className="w-6 h-6" />
+                    </div>
+                    <span className="flex h-3 w-3 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                    </span>
+                  </div>
+                  
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Mis Propuestas (Inbox)</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-8 flex-1">
+                    Bandeja de mensajes de contacto ciego enviados y respuestas de candidatos.
                   </p>
-                  <Button asChild size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                    <Link href="/talento">
-                      Ir al buscador
+                  
+                  <Button asChild variant="outline" className="w-full border-gray-200 dark:border-gray-700 rounded-xl hover:bg-amber-50 hover:text-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-400">
+                    <Link href="/dashboard/proposals">
+                      Ver bandeja de mensajes
                     </Link>
                   </Button>
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-md bg-white dark:bg-[#161616] overflow-hidden">
-                <div className="h-2 bg-gradient-to-r from-emerald-600 to-teal-600"></div>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Star className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /> Talentos Guardados
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 dark:text-gray-400 mb-6">
-                    Revisa los perfiles que has marcado como favoritos para tus procesos de selección abiertos.
+              <Card className="col-span-1 md:col-span-2 border border-gray-100 dark:border-gray-800 shadow-xl shadow-emerald-900/5 bg-white dark:bg-[#111] rounded-2xl group hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all flex flex-col">
+                <CardContent className="p-8 flex-1 flex flex-col">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
+                      <Bookmark className="w-6 h-6" />
+                    </div>
+                  </div>
+                  
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Mis Guardados</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-8 flex-1">
+                    Gestiona tu cantera privada de perfiles que marcaste para contactar luego.
                   </p>
-                  <Button variant="outline" size="lg" className="w-full" disabled>
-                    Próximamente
+                  
+                  <Button asChild variant="outline" className="w-full border-gray-200 dark:border-gray-700 rounded-xl hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400">
+                    <Link href="/dashboard/saved-candidates">
+                      Abrir favoritos
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>
             </div>
-          </>
+          </div>
         ) : (
-          <>
-        {/* Profile Completeness Widget with Missions */}
-        <Card className="mb-10 border-blue-100 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-900/10 shadow-none overflow-hidden">
-          <CardContent className="p-0 flex flex-col lg:flex-row">
-            <div className="p-6 flex-1 flex flex-col md:flex-row items-center gap-6">
-              <div className="relative h-20 w-20 shrink-0 flex items-center justify-center rounded-full bg-white dark:bg-[#111] border-4 border-blue-100 dark:border-blue-900">
-                <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{completeness}%</span>
-                <svg className="absolute inset-0 h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="46" fill="transparent" stroke="currentColor" strokeWidth="8" className="text-blue-100 dark:text-blue-900" />
-                  <circle cx="50" cy="50" r="46" fill="transparent" stroke="currentColor" strokeWidth="8" strokeDasharray={`${completeness * 2.89} 289`} className="text-blue-600 dark:text-blue-500 transition-all duration-1000 ease-out" />
+          <div className="space-y-8">
+            {/* Hero / Banner Moderno para Candidato */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 p-8 md:p-12 shadow-2xl">
+              <div className="absolute top-0 right-0 -mt-16 -mr-16 opacity-10">
+                <svg width="400" height="400" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
-              <div className="flex-1 text-center md:text-left">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Fuerza de tu perfil: {completeness === 100 ? '¡Estelar!' : 'Intermedia'}</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  {completeness === 100 
-                    ? 'Tienes un perfil sumamente atractivo para los reclutadores. Recibirás 3x más ofertas.'
-                    : 'Completa las misiones faltantes para aumentar tu visibilidad radicalmente y destacar del resto.'}
+              
+              <div className="relative z-10 max-w-2xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-blue-200 text-sm font-medium mb-6 backdrop-blur-sm">
+                  <Star className="w-4 h-4 fill-amber-400" />
+                  Tu centro de control profesional
+                </div>
+                <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight">
+                  Hola <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">{firstName}</span>, tu próximo gran salto comienza aquí
+                </h2>
+                <p className="text-blue-100/80 text-lg mb-8 max-w-xl leading-relaxed">
+                  Mantén tu perfil al 100%, revisa tus métricas de visibilidad en tiempo real y comparte tu vitrina profesional para atraer a los mejores empleadores.
                 </p>
-                {completeness === 100 && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-500 rounded-full text-xs font-semibold">
-                    <Star className="w-3 h-3 fill-amber-500" /> Perfil Destacado
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              {/* MAIN CONTENT (Left Column) */}
+              <div className="col-span-1 lg:col-span-2 space-y-6">
+                
+                {/* Profile Completeness Widget */}
+                <Card className="border border-gray-100 dark:border-gray-800 shadow-xl shadow-blue-900/5 bg-white dark:bg-[#111] overflow-hidden rounded-2xl">
+                  <CardContent className="p-0 flex flex-col">
+                    <div className="p-8 flex items-center gap-6 border-b border-gray-100 dark:border-gray-800">
+                      <div className="relative h-20 w-20 shrink-0 flex items-center justify-center rounded-full bg-white dark:bg-[#111] shadow-inner">
+                        <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{completeness}%</span>
+                        <svg className="absolute inset-0 h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
+                          <circle cx="50" cy="50" r="46" fill="transparent" stroke="currentColor" strokeWidth="8" className="text-gray-100 dark:text-gray-800" />
+                          <circle cx="50" cy="50" r="46" fill="transparent" stroke="currentColor" strokeWidth="8" strokeDasharray={`${completeness * 2.89} 289`} className="text-blue-600 dark:text-blue-500 transition-all duration-1000 ease-out drop-shadow-md" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Fuerza de tu perfil: {completeness === 100 ? '¡Estelar!' : 'Intermedia'}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {completeness === 100 
+                            ? 'Tienes un perfil sumamente atractivo. Estás en la mejor posición para recibir propuestas.'
+                            : 'Completa las misiones faltantes para aumentar tu visibilidad.'}
+                        </p>
+                      </div>
+                    </div>
+                    {completeness < 100 && (
+                      <div className="bg-gray-50 dark:bg-[#161616] p-6 flex flex-col justify-center">
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                          🎯 Misiones pendientes
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-600 dark:text-gray-300">
+                          {missingItems.map((item, idx) => (
+                            <div key={idx} className="flex items-start gap-2 bg-white dark:bg-[#1A1A1A] p-3 rounded-lg border border-gray-100 dark:border-gray-800">
+                              <div className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                              <span>
+                                {item.message} <span className="font-semibold text-blue-600 dark:text-blue-400">(+{item.points}%)</span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <Button variant="default" onClick={() => router.push('/profile')} className="w-full sm:w-auto self-start mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md">
+                          Completar mi perfil ahora
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Herramientas Principales */}
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Tus herramientas</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    
+                    <button 
+                      onClick={() => router.push('/dashboard/applications')}
+                      className="group relative overflow-hidden flex items-center p-5 bg-white dark:bg-[#161616] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-indigo-200 dark:hover:border-indigo-900/50 transition-all duration-300 text-left hover:-translate-y-1"
+                    >
+                      <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl mr-4 group-hover:scale-110 transition-transform duration-300">
+                        <Briefcase className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white mb-0.5">Mis Postulaciones</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Procesos y chats activos.
+                        </p>
+                      </div>
+                    </button>
+
+                    <button 
+                      onClick={() => router.push('/dashboard/proposals')}
+                      className="group relative overflow-hidden flex items-center p-5 bg-white dark:bg-[#161616] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-amber-200 dark:hover:border-amber-900/50 transition-all duration-300 text-left hover:-translate-y-1"
+                    >
+                      <div className="p-4 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-xl mr-4 group-hover:scale-110 transition-transform duration-300">
+                        <MessageSquare className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white mb-0.5">Mis Propuestas</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Solicitudes de contacto directo.
+                        </p>
+                      </div>
+                    </button>
+
+                    <button 
+                      onClick={() => router.push('/profile')}
+                      className="group relative overflow-hidden flex items-center p-5 bg-white dark:bg-[#161616] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-blue-200 dark:hover:border-blue-900/50 transition-all duration-300 text-left hover:-translate-y-1"
+                    >
+                      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl mr-4 group-hover:scale-110 transition-transform duration-300">
+                        <User className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white mb-0.5">Editar Mi Perfil</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Actualiza tu experiencia.
+                        </p>
+                      </div>
+                    </button>
+
+                    <button 
+                      onClick={downloadCV}
+                      disabled={isDownloading}
+                      className="group relative overflow-hidden flex items-center p-5 bg-white dark:bg-[#161616] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-red-200 dark:hover:border-red-900/50 transition-all duration-300 text-left disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-1"
+                    >
+                      <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl mr-4 group-hover:scale-110 transition-transform duration-300">
+                        {isDownloading ? <Loader2 className="h-6 w-6 animate-spin" /> : <FileText className="h-6 w-6" />}
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white mb-0.5">Descargar mi CV</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          PDF profesional listo.
+                        </p>
+                      </div>
+                    </button>
+
+                    <button 
+                      onClick={() => router.push('/dashboard/share-card')}
+                      className="group relative overflow-hidden flex items-center p-5 bg-white dark:bg-[#161616] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-purple-200 dark:hover:border-purple-900/50 transition-all duration-300 text-left hover:-translate-y-1"
+                    >
+                      <div className="p-4 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-xl mr-4 group-hover:scale-110 transition-transform duration-300">
+                        <Share2 className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white mb-0.5">Compartir Tarjeta</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Para redes sociales.
+                        </p>
+                      </div>
+                    </button>
+
+                    <button 
+                      onClick={() => router.push(profileData?.slug ? `/talento/${profileData.slug}` : '/profile')}
+                      className="group relative overflow-hidden flex items-center p-5 bg-white dark:bg-[#161616] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all duration-300 text-left hover:-translate-y-1"
+                    >
+                      <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-xl mr-4 group-hover:scale-110 transition-transform duration-300">
+                        <ExternalLink className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white mb-0.5">Ver Perfil Público</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Cómo te ven las empresas.
+                        </p>
+                      </div>
+                    </button>
+
                   </div>
-                )}
+                </div>
+
+                {/* API para Developers (Movido abajo) */}
+                <Card className="border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#111] overflow-hidden rounded-2xl mt-6">
+                  <CardContent className="p-0 flex flex-col md:flex-row">
+                    <div className="p-6 md:p-8 flex-1">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                        <Code className="w-5 h-5 text-blue-500" /> API para Developers
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                        Usa nuestro endpoint público para alimentar tu sitio web personal con tu información actualizada, sin crear un backend.
+                      </p>
+                      <div className="bg-[#0A0A0A] rounded-xl p-4 overflow-x-auto border border-gray-800">
+                        <pre className="text-xs font-mono text-gray-300">
+                          <code className="language-javascript">
+<span className="text-pink-400">const</span> <span className="text-blue-300">fetchMyProfile</span> <span className="text-pink-400">=</span> <span className="text-pink-400">async</span> () <span className="text-pink-400">{'=>'}</span> &#123;{'\n'}
+  <span className="text-pink-400">const</span> res <span className="text-pink-400">=</span> <span className="text-pink-400">await</span> <span className="text-blue-300">fetch</span>(<span className="text-green-300">'https://api.vitrinatuempleo.com/v1/profiles/{profileData?.slug || 'tu-slug'}'</span>);{'\n'}
+  <span className="text-blue-300">console</span>.<span className="text-blue-300">log</span>(<span className="text-pink-400">await</span> res.<span className="text-blue-300">json</span>());{'\n'}
+&#125;;
+                          </code>
+                        </pre>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+              </div>
+
+              {/* SIDEBAR (Right Column) */}
+              <div className="col-span-1 space-y-6">
+                
+                {/* Stats Cards Apiladas */}
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Tus Estadísticas</h2>
+                
+                <Card className="border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#111] rounded-2xl">
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                      <Eye className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Vistas de Perfil</h3>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{viewsCount}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#111] rounded-2xl">
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                      <SearchIcon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Apariciones Búsqueda</h3>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{searchCount}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#111] rounded-2xl">
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+                      <Share2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Tarjetas Compartidas</h3>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{sharesCount}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+
               </div>
             </div>
-            {completeness < 100 && (
-              <div className="bg-blue-100/50 dark:bg-blue-900/20 p-6 lg:w-72 border-t lg:border-t-0 lg:border-l border-blue-100 dark:border-blue-900/50">
-                <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                  🎯 Misiones pendientes
-                </h4>
-                <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                  {!profileData?.profilePhotoUrl && (
-                    <li className="flex items-start gap-2">
-                      <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
-                      Sube una foto de perfil (+20%)
-                    </li>
-                  )}
-                  {!profileData?.summary && (
-                    <li className="flex items-start gap-2">
-                      <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
-                      Redacta tu resumen bio (+20%)
-                    </li>
-                  )}
-                  {(!profileData?.skills?.length && !profileData?.languages?.length) && (
-                    <li className="flex items-start gap-2">
-                      <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
-                      Añade habilidades clave (+20%)
-                    </li>
-                  )}
-                  {(!profileData?.linkedinUrl && !profileData?.githubUrl) && (
-                    <li className="flex items-start gap-2">
-                      <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
-                      Conecta tus redes/enlaces (+20%)
-                    </li>
-                  )}
-                </ul>
-                <Button variant="default" size="sm" onClick={() => router.push('/profile')} className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
-                  Completar perfil ahora
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <Card className="border-0 shadow-md bg-white dark:bg-[#161616]">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Vistas de Perfil
-              </CardTitle>
-              <Eye className="h-5 w-5 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                {totalThisWeek}
-              </div>
-              <p className="text-xs text-emerald-500 flex items-center gap-1 mt-1 font-medium">
-                <TrendingUp className="h-3 w-3" />
-                +14% respecto a la semana pasada
-              </p>
-              <p className="text-[10px] text-gray-400 mt-2 border-t border-gray-100 dark:border-gray-800 pt-2">
-                Reclutadores buscando <strong>{profileData?.headline?.split(' ')[0] || 'tu perfil'}</strong> vieron tu vitrina.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-md bg-white dark:bg-[#161616]">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Apariciones en Búsquedas
-              </CardTitle>
-              <SearchIcon className="h-5 w-5 text-indigo-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                {Math.floor(totalThisWeek * 3.5)}
-              </div>
-              <p className="text-xs text-emerald-500 flex items-center gap-1 mt-1 font-medium">
-                <TrendingUp className="h-3 w-3" />
-                +5% respecto a la semana pasada
-              </p>
-              <p className="text-[10px] text-gray-400 mt-2 border-t border-gray-100 dark:border-gray-800 pt-2">
-                Apareciste en el top 10% de resultados para <strong>{profileData?.skills?.[0]?.skill?.name || profileData?.skills?.[0] || 'tu área'}</strong>.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-md bg-white dark:bg-[#161616]">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Tarjetas Compartidas
-              </CardTitle>
-              <Share2 className="h-5 w-5 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                {Math.floor(totalThisWeek * 0.4)}
-              </div>
-              <p className="text-xs text-gray-500 mt-1 font-medium">
-                Veces que los reclutadores te guardaron
-              </p>
-              <p className="text-[10px] text-gray-400 mt-2 border-t border-gray-100 dark:border-gray-800 pt-2">
-                Tu perfil ha sido enviado a {Math.floor(totalThisWeek * 0.2) || 1} empresas distintas esta semana.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions Grid */}
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Acciones Rápidas</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          
-          <button 
-            onClick={() => router.push('/profile')}
-            className="group flex flex-col items-start p-6 bg-white dark:bg-[#161616] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md hover:border-blue-200 dark:hover:border-blue-900/50 transition-all text-left"
-          >
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl mb-4 group-hover:scale-110 transition-transform">
-              <User className="h-6 w-6" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Editar Mi Perfil</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Actualiza tus habilidades, resumen y experiencia para destacar más.
-            </p>
-          </button>
-
-          <button 
-            onClick={() => router.push('/dashboard/share-card')}
-            className="group flex flex-col items-start p-6 bg-white dark:bg-[#161616] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-900/50 transition-all text-left"
-          >
-            <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl mb-4 group-hover:scale-110 transition-transform">
-              <Share2 className="h-6 w-6" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Compartir Tarjeta</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Genera tu tarjeta pública de presentación optimizada para redes sociales.
-            </p>
-          </button>
-
-          <button 
-            onClick={() => router.push(profileData?.slug ? `/talento/${profileData.slug}` : '/profile')}
-            className="group flex flex-col items-start p-6 bg-white dark:bg-[#161616] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-900/50 transition-all text-left"
-          >
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-xl mb-4 group-hover:scale-110 transition-transform">
-              <ExternalLink className="h-6 w-6" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Ver Perfil Público</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Mira exactamente cómo te ven los reclutadores.
-            </p>
-          </button>
-
-        </div>
-        </>
+          </div>
         )}
       </main>
 

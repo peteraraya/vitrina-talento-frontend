@@ -185,7 +185,7 @@ export function ProfileDetailsForm({ form, mutation, uploadPhotoMutation, profil
                 name="displayName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nombre para mostrar</FormLabel>
+                    <FormLabel>Nombre completo</FormLabel>
                     <FormControl>
                       <Input placeholder="Ej. Juan Pérez" {...field} />
                     </FormControl>
@@ -196,12 +196,40 @@ export function ProfileDetailsForm({ form, mutation, uploadPhotoMutation, profil
 
               <FormField
                 control={form.control}
-                name="headline"
+                name="companyName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Profesion u Oficio</FormLabel>
+                    <FormLabel>Empresa (Opcional - Reclutadores)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ej. Desarrollador Frontend React" {...field} />
+                      <Input placeholder="Ej. Tech Corp" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="website"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sitio Web de la Empresa (Opcional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="headline"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Profesion o Titular</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ej. Desarrollador / Technical Recruiter en Tech Corp" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
