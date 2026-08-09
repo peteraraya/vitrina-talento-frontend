@@ -29,7 +29,8 @@ export default function ProfilePage() {
     availabilityQuery, 
     updateProfileMutation, 
     updateVisibilityMutation, 
-    updateAvailabilityMutation 
+    updateAvailabilityMutation,
+    uploadPhotoMutation
   } = useProfileQueries();
 
   const { data: profile, isLoading } = profileQuery;
@@ -50,9 +51,23 @@ export default function ProfilePage() {
       summary: '',
       location: '',
       yearsOfExperience: 0,
+      videoPitchUrl: '',
+      phoneNumber: '',
+      whatsappNumber: '',
+      contactEmail: '',
+      githubUrl: '',
+      linkedinUrl: '',
+      portfolioUrl: '',
+      instagramUrl: '',
+      twitterUrl: '',
+      facebookUrl: '',
       languages: [],
       educations: [],
       certifications: [],
+      portfolioItems: [],
+      references: [],
+      licenses: [],
+      skills: [],
     },
   });
 
@@ -76,6 +91,10 @@ export default function ProfilePage() {
       expectedSalaryMin: 0,
       expectedSalaryMax: 0,
       currency: 'USD',
+      salaryPeriod: 'MONTHLY',
+      willingToTravel: false,
+      shiftWork: false,
+      nightShift: false,
     },
   });
 
@@ -192,7 +211,12 @@ export default function ProfilePage() {
           {/* Main Content Area */}
           <div className="flex-1 space-y-10 pb-20">
             <div id="datos" className="scroll-mt-24">
-              <ProfileDetailsForm form={form} mutation={updateProfileMutation} />
+              <ProfileDetailsForm 
+                form={form} 
+                mutation={updateProfileMutation} 
+                uploadPhotoMutation={uploadPhotoMutation}
+                profilePhotoUrl={profile?.profilePhotoUrl}
+              />
             </div>
             
             <div id="disponibilidad" className="scroll-mt-24">

@@ -8,15 +8,37 @@ import {
   Button, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input, Select, Textarea
 } from '@/components/ui';
 import { Camera, Link2, Globe, User, Languages, GraduationCap, Award, FileBadge, Briefcase, Users, Plus, Trash2, Copy, ExternalLink, CheckCircle2, X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+
+import Image from 'next/image';
+import { useRef } from 'react';
 
 interface Props {
   form: UseFormReturn<ProfileFormValues>;
   mutation: UseMutationResult<any, Error, ProfileFormValues, unknown>;
+  uploadPhotoMutation: UseMutationResult<any, Error, File, unknown>;
+  profilePhotoUrl?: string | null;
 }
 
-export function ProfileDetailsForm({ form, mutation }: Props) {
+export function ProfileDetailsForm({ form, mutation, uploadPhotoMutation, profilePhotoUrl }: Props) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('El archivo excede el tamaño máximo de 5MB');
+      return;
+    }
+
+    toast.promise(uploadPhotoMutation.mutateAsync(file), {
+      loading: 'Subiendo foto de perfil...',
+      success: '¡Foto actualizada correctamente!',
+      error: (err) => err instanceof Error ? err.message : 'Error al subir la foto',
+    });
+  };
   const { fields: langFields, append: appendLang, remove: removeLang } = useFieldArray({ control: form.control, name: "languages" });
   const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
 
@@ -66,6 +88,17 @@ export function ProfileDetailsForm({ form, mutation }: Props) {
     form.setValue("skills", currentSkills.filter(s => s !== skillToRemove), { shouldDirty: true, shouldTouch: true });
   };
 
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (form.formState.isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [form.formState.isDirty]);
+
   return (
     <Card className="border-0 shadow-xl shadow-gray-200/40 dark:shadow-none bg-white dark:bg-[#161616] overflow-hidden">
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-8">
@@ -90,18 +123,41 @@ export function ProfileDetailsForm({ form, mutation }: Props) {
             className="space-y-8"
           >
             
-            {/* Avatar Mock UI */}
+            {/* Avatar Upload UI */}
             <div className="flex items-center gap-6 p-6 bg-gray-50 dark:bg-[#111] rounded-2xl border border-gray-100 dark:border-gray-800">
-              <div className="h-24 w-24 rounded-full bg-white dark:bg-black flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-700 relative overflow-hidden group cursor-pointer hover:border-blue-500 transition-colors">
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/png, image/jpeg, image/jpg, image/webp" 
+                onChange={handleFileChange}
+              />
+              <div 
+                className="h-24 w-24 rounded-full bg-white dark:bg-black flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-700 relative overflow-hidden group cursor-pointer hover:border-blue-500 transition-colors shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
                   <Camera className="h-6 w-6 text-white" />
                 </div>
-                <User className="h-8 w-8 text-gray-300 dark:text-gray-600" />
+                {profilePhotoUrl ? (
+                  <Image src={profilePhotoUrl} alt="Avatar" fill className="object-cover" />
+                ) : (
+                  <User className="h-8 w-8 text-gray-300 dark:text-gray-600" />
+                )}
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Foto de Perfil</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Un retrato claro y amigable aumenta un 40% las vistas a tu perfil.</p>
-                <Button variant="outline" size="sm" type="button" className="rounded-full font-medium" disabled>Subir nueva foto (Próximamente)</Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  type="button" 
+                  className="rounded-full font-medium" 
+                  disabled={uploadPhotoMutation.isPending}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploadPhotoMutation.isPending ? 'Subiendo...' : 'Subir nueva foto'}
+                </Button>
               </div>
             </div>
 
@@ -264,7 +320,42 @@ export function ProfileDetailsForm({ form, mutation }: Props) {
                       onChange={(e) => setSkillInput(e.target.value)}
                       onKeyDown={handleAddSkill}
                       className="flex-1"
+                      list="popular-skills"
                     />
+                    <datalist id="popular-skills">
+                      <option value="React" />
+                      <option value="Node.js" />
+                      <option value="TypeScript" />
+                      <option value="JavaScript" />
+                      <option value="Python" />
+                      <option value="Java" />
+                      <option value="C#" />
+                      <option value="C++" />
+                      <option value="PHP" />
+                      <option value="Ruby" />
+                      <option value="Go" />
+                      <option value="Swift" />
+                      <option value="Kotlin" />
+                      <option value="Flutter" />
+                      <option value="Dart" />
+                      <option value="AWS" />
+                      <option value="Docker" />
+                      <option value="Kubernetes" />
+                      <option value="SQL" />
+                      <option value="MongoDB" />
+                      <option value="PostgreSQL" />
+                      <option value="Redis" />
+                      <option value="GraphQL" />
+                      <option value="Git" />
+                      <option value="Figma" />
+                      <option value="UI/UX" />
+                      <option value="Scrum" />
+                      <option value="Agile" />
+                      <option value="Liderazgo" />
+                      <option value="Ventas B2B" />
+                      <option value="Marketing Digital" />
+                      <option value="SEO" />
+                    </datalist>
                     <Button type="button" onClick={handleAddSkill} variant="secondary" className="shrink-0">
                       Agregar
                     </Button>
@@ -548,16 +639,24 @@ export function ProfileDetailsForm({ form, mutation }: Props) {
               </summary>
               <div className="pt-6 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
                 {langFields.length === 0 && (
-                  <div className="text-center py-6 bg-gray-50 dark:bg-[#111] border border-dashed border-gray-200 dark:border-gray-800 rounded-xl text-gray-500 text-sm">
-                    No has agregado ningún idioma aún.
+                  <div className="text-center py-12 bg-gray-50 dark:bg-[#111] border border-dashed border-gray-200 dark:border-gray-800 rounded-xl flex flex-col items-center justify-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                      <Languages className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-gray-900 dark:text-white font-medium">Aún no hay idiomas</p>
+                      <p className="text-gray-500 text-sm max-w-[250px] mx-auto mt-1">Saber varios idiomas te abre puertas a mejores ofertas de trabajo.</p>
+                    </div>
                   </div>
                 )}
                 {langFields.map((field, index) => (
                   <div key={field.id} className="p-5 bg-white dark:bg-[#161616] border border-gray-100 dark:border-gray-800 shadow-sm rounded-xl relative group">
                     <button 
                       type="button" 
-                      className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                      className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:ring-2 focus-visible:ring-red-500"
                       onClick={() => removeLang(index)}
+                      aria-label="Eliminar idioma"
+                      title="Eliminar idioma"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -619,16 +718,24 @@ export function ProfileDetailsForm({ form, mutation }: Props) {
               </summary>
               <div className="pt-6 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
                 {eduFields.length === 0 && (
-                  <div className="text-center py-6 bg-gray-50 dark:bg-[#111] border border-dashed border-gray-200 dark:border-gray-800 rounded-xl text-gray-500 text-sm">
-                    No has agregado ninguna educación.
+                  <div className="text-center py-12 bg-gray-50 dark:bg-[#111] border border-dashed border-gray-200 dark:border-gray-800 rounded-xl flex flex-col items-center justify-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                      <GraduationCap className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <div>
+                      <p className="text-gray-900 dark:text-white font-medium">Sin estudios registrados</p>
+                      <p className="text-gray-500 text-sm max-w-[250px] mx-auto mt-1">Comparte tus logros académicos o técnicos para destacar tu perfil.</p>
+                    </div>
                   </div>
                 )}
                 {eduFields.map((field, index) => (
                   <div key={field.id} className="p-5 bg-white dark:bg-[#161616] border border-gray-100 dark:border-gray-800 shadow-sm rounded-xl relative group">
                     <button 
                       type="button" 
-                      className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                      className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:ring-2 focus-visible:ring-red-500"
                       onClick={() => removeEdu(index)}
+                      aria-label="Eliminar educación"
+                      title="Eliminar educación"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -683,16 +790,24 @@ export function ProfileDetailsForm({ form, mutation }: Props) {
               </summary>
               <div className="pt-6 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
                 {certFields.length === 0 && (
-                  <div className="text-center py-6 bg-gray-50 dark:bg-[#111] border border-dashed border-gray-200 dark:border-gray-800 rounded-xl text-gray-500 text-sm">
-                    No has agregado certificaciones.
+                  <div className="text-center py-12 bg-gray-50 dark:bg-[#111] border border-dashed border-gray-200 dark:border-gray-800 rounded-xl flex flex-col items-center justify-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                      <Award className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="text-gray-900 dark:text-white font-medium">Aún sin certificaciones</p>
+                      <p className="text-gray-500 text-sm max-w-[250px] mx-auto mt-1">Los reclutadores valoran mucho el aprendizaje continuo.</p>
+                    </div>
                   </div>
                 )}
                 {certFields.map((field, index) => (
                   <div key={field.id} className="p-5 bg-white dark:bg-[#161616] border border-gray-100 dark:border-gray-800 shadow-sm rounded-xl relative group">
                     <button 
                       type="button" 
-                      className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                      className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:ring-2 focus-visible:ring-red-500"
                       onClick={() => removeCert(index)}
+                      aria-label="Eliminar certificación"
+                      title="Eliminar certificación"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -798,16 +913,24 @@ export function ProfileDetailsForm({ form, mutation }: Props) {
               </summary>
               <div className="pt-6 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
                 {portfolioFields.length === 0 && (
-                  <div className="text-center py-6 bg-gray-50 dark:bg-[#111] border border-dashed border-gray-200 dark:border-gray-800 rounded-xl text-gray-500 text-sm">
-                    No has agregado proyectos a tu portafolio.
+                  <div className="text-center py-12 bg-gray-50 dark:bg-[#111] border border-dashed border-gray-200 dark:border-gray-800 rounded-xl flex flex-col items-center justify-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <Briefcase className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-gray-900 dark:text-white font-medium">Portafolio vacío</p>
+                      <p className="text-gray-500 text-sm max-w-[250px] mx-auto mt-1">Muestra tus mejores trabajos con imágenes o enlaces y aumenta tu contratación.</p>
+                    </div>
                   </div>
                 )}
                 {portfolioFields.map((field, index) => (
                   <div key={field.id} className="p-5 bg-white dark:bg-[#161616] border border-gray-100 dark:border-gray-800 shadow-sm rounded-xl relative group">
                     <button 
                       type="button" 
-                      className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                      className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:ring-2 focus-visible:ring-red-500"
                       onClick={() => removePortfolio(index)}
+                      aria-label="Eliminar proyecto del portafolio"
+                      title="Eliminar proyecto"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

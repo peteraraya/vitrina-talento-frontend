@@ -15,5 +15,8 @@ export const API_ROUTES = {
   },
   AVAILABILITY: {
     ME: '/availability/me',
+  },
+  STATS: {
+    SHARE: '/profiles/me/share-stats',
   }
 } as const;

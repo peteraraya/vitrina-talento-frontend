@@ -7,6 +7,7 @@ import { Button, Card, CardHeader, CardTitle, CardContent, CardDescription, Inpu
 import { Navbar, Footer } from '@/components/layout';
 import { Copy, CheckCircle2, ArrowLeft, Download, Share2 } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
+import Image from 'next/image';
 
 export default function ShareCardPage() {
   const { isAuthenticated, _hasHydrated } = useAuthStore();
@@ -56,8 +57,14 @@ export default function ShareCardPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Comparte tu Tarjeta</h1>
             <p className="text-gray-600 dark:text-gray-400 mb-6">Esta es la imagen que aparecerá automáticamente cuando envíes tu enlace por LinkedIn, WhatsApp o X.</p>
             
-            <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-xl mb-6">
-              <img src={ogImageUrl} alt="Preview Tarjeta" className="w-full h-auto aspect-[1200/630] object-cover" />
+            <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-xl mb-6 relative w-full aspect-[1200/630]">
+              <Image 
+                src={ogImageUrl} 
+                alt="Preview Tarjeta" 
+                fill 
+                className="object-cover" 
+                unoptimized // Usamos unoptimized porque es una ruta dinámica de la misma app que retorna una imagen
+              />
             </div>
 
             <Button variant="outline" className="w-full gap-2 mb-2" onClick={() => window.open(ogImageUrl, '_blank')}>
@@ -94,14 +101,26 @@ export default function ShareCardPage() {
                     <Button 
                       variant="outline" 
                       className="w-full gap-2 text-[#0A66C2] border-[#0A66C2]/20 hover:bg-[#0A66C2]/5"
-                      onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(publicUrl)}`, '_blank')}
+                      onClick={() => {
+                        const headline = profileData?.headline || 'nuevas oportunidades';
+                        const text = `Hola red 👋 Estoy abierto a ${headline}. Les comparto mi perfil profesional detallado: ${publicUrl}`;
+                        // LinkedIn share-offsite doesn't officially support pre-filled text, but we can pass it via url for tools that support it or use twitter instead for text.
+                        // Actually, LinkedIn only supports URL. For full text, people use 'text' param on Twitter or WhatsApp.
+                        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(publicUrl)}`, '_blank');
+                      }}
                     >
                       Compartir en LinkedIn
                     </Button>
                     <Button 
                       variant="outline" 
                       className="w-full gap-2 text-[#25D366] border-[#25D366]/20 hover:bg-[#25D366]/5"
-                      onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`¡Echa un vistazo a mi perfil profesional en Vitrina tu Empleo! ${publicUrl}`)}`, '_blank')}
+                      onClick={() => {
+                        const headline = profileData?.headline || 'oportunidades laborales';
+                        const skills = profileData?.skills?.slice(0, 3).map((s: any) => typeof s === 'string' ? s : s.skill?.name || s.name).join(', ') || '';
+                        const skillsText = skills ? ` Tengo experiencia en ${skills}.` : '';
+                        const message = `Hola 👋 Estoy disponible para ${headline}.${skillsText} Puedes ver mi perfil detallado aquí: ${publicUrl}`;
+                        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                      }}
                     >
                       Compartir en WhatsApp
                     </Button>

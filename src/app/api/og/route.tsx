@@ -1,6 +1,8 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 
+export const runtime = 'edge';
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -10,20 +12,42 @@ export async function GET(req: NextRequest) {
       return new Response('Slug es requerido', { status: 400 });
     }
 
-    // 1. Llamar al Backend (cache: 'no-store' asegura que siempre traiga el dato real)
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api/v1';
-    // Mantenemos la normalización para prevenir errores de doble slash
-    const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
-    
-    const profileRes = await fetch(`${baseUrl}/profiles/${slug}/share-card-data`, {
-      cache: 'no-store',
-    });
+    let data: any = {};
 
-    if (!profileRes.ok) {
-      return new Response('Perfil no encontrado', { status: 404 });
+    if (slug === 'mock-slug') {
+      data = {
+        displayName: 'Candidato de Ejemplo',
+        headline: 'Desarrollador Full Stack',
+        topSkills: ['React', 'Node.js', 'TypeScript'],
+        location: 'Santiago, Chile',
+        workMode: 'REMOTE',
+        availabilityStatus: 'IMMEDIATE',
+        avatarUrl: null,
+      };
+    } else {
+      // 1. Llamar al Backend (cache: 'no-store' asegura que siempre traiga el dato real)
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api/v1';
+      // Mantenemos la normalización para prevenir errores de doble slash
+      const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+      
+      const profileRes = await fetch(`${baseUrl}/profiles/${slug}/share-card-data`, {
+        cache: 'no-store',
+      });
+
+      if (!profileRes.ok) {
+        data = {
+          displayName: 'Perfil No Encontrado',
+          headline: 'Completa tu perfil para compartir tu tarjeta',
+          topSkills: [],
+          location: '-',
+          workMode: 'REMOTE',
+          availabilityStatus: 'UNAVAILABLE',
+          avatarUrl: null,
+        };
+      } else {
+        data = await profileRes.json();
+      }
     }
-
-    const data = await profileRes.json();
 
     // 2. Extraer los datos mapeando correctamente
     const name = data.displayName || 'Candidato Anónimo';
@@ -35,6 +59,22 @@ export async function GET(req: NextRequest) {
     // Configuración de imagen de perfil o iniciales por defecto
     const avatarUrl = data.avatarUrl;
     const initials = name.substring(0, 2).toUpperCase();
+
+    // Precargar imagen para evitar crash en edge runtime de Satori
+    let avatarSrc = null;
+    if (avatarUrl) {
+      try {
+        const imgRes = await fetch(avatarUrl);
+        if (imgRes.ok) {
+          const buf = await imgRes.arrayBuffer();
+          const base64 = Buffer.from(buf).toString('base64');
+          const contentType = imgRes.headers.get('content-type') || 'image/png';
+          avatarSrc = `data:${contentType};base64,${base64}`;
+        }
+      } catch (err) {
+        console.error('Error cargando avatarUrl para OG', err);
+      }
+    }
 
     // 3. Dibujar la tarjeta con Tailwind y Satori
     return new ImageResponse(
@@ -80,8 +120,8 @@ export async function GET(req: NextRequest) {
                 boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
               }}
             >
-              {avatarUrl ? (
-                <img src={avatarUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {avatarSrc ? (
+                <img src={avatarSrc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 initials
               )}
@@ -183,6 +223,23 @@ export async function GET(req: NextRequest) {
       }
     );
   } catch (e: any) {
-    return new Response('Error generando tarjeta', { status: 500 });
+    // Retornamos un mensaje de error renderizado como imagen en caso de excepción
+    return new ImageResponse(
+      (
+        <div style={{
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#0f172a',
+          color: 'white',
+          fontSize: 32,
+        }}>
+          Error generando tarjeta
+        </div>
+      ),
+      { width: 1200, height: 630 }
+    );
   }
 }

@@ -7,33 +7,57 @@ import { Button, Card, CardHeader, CardTitle, CardContent, CardDescription } fro
 import { Navbar, Footer } from '@/components/layout';
 import { fetchApi } from '@/lib/api';
 import { API_ROUTES } from '@/config/api.config';
-import { Eye, Share2, TrendingUp, User, LogOut, ExternalLink, Settings, Loader2 } from 'lucide-react';
+import { Eye, Share2, TrendingUp, User, LogOut, ExternalLink, Settings, Loader2, Star, Search } from 'lucide-react';
+import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
-  const { isAuthenticated, logout, _hasHydrated } = useAuthStore();
+  const { isAuthenticated, logout, _hasHydrated, role } = useAuthStore();
   const router = useRouter();
   const [stats, setStats] = useState<{ totalThisWeek: number, byChannel: any[] } | null>(null);
   const [profileData, setProfileData] = useState<any>(null);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
-    if (!_hasHydrated) return; // Esperar a que Zustand lea el localStorage
+    if (!_hasHydrated) return;
 
     if (!isAuthenticated) {
       router.push('/login');
       return;
     }
 
-    fetchApi('/profiles/me/share-stats')
-      .then(res => res.json())
-      .then(data => setStats(data))
-      .catch(console.error);
-      
-    fetchApi(API_ROUTES.PROFILE.ME)
-      .then(res => res.json())
-      .then(data => setProfileData(data))
-      .catch(console.error);
-  }, [isAuthenticated, router]);
+    if (role === 'RECRUITER') {
+      setIsLoadingData(false);
+      return;
+    }
+
+    Promise.all([
+      fetchApi(API_ROUTES.STATS.SHARE).then(res => {
+        if (!res.ok) throw new Error('Stats not found');
+        return res.json();
+      }).then(data => {
+        // Soporte por si el backend envuelve la respuesta en { data: ... }
+        const statsPayload = data.data ? data.data : data;
+        setStats(statsPayload);
+      }).catch(err => {
+        console.error('Error fetching stats:', err);
+        setStats(null);
+      }),
+      fetchApi(API_ROUTES.PROFILE.ME).then(res => {
+        if (!res.ok) throw new Error('Profile not found');
+        return res.json();
+      }).then(data => {
+        const profilePayload = data.data ? data.data : data;
+        setProfileData(profilePayload);
+      }).catch(err => {
+        console.error('Error fetching profile:', err);
+        setProfileData(null);
+      })
+    ]).finally(() => {
+      setIsLoadingData(false);
+    });
+
+  }, [isAuthenticated, router, _hasHydrated, role]);
 
   // Cálculo de completitud de perfil mock
   const calculateCompleteness = () => {
@@ -49,7 +73,7 @@ export default function DashboardPage() {
 
   const completeness = calculateCompleteness();
 
-  if (!_hasHydrated || !isAuthenticated) {
+  if (!_hasHydrated || !isAuthenticated || isLoadingData) {
     return (
       <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0A0A0A]">
         <Navbar />
@@ -69,6 +93,8 @@ export default function DashboardPage() {
     );
   }
 
+  const totalThisWeek = typeof stats?.totalThisWeek === 'number' ? stats.totalThisWeek : 0;
+
   return (
     <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0A0A0A] transition-colors duration-300">
       <Navbar />
@@ -78,10 +104,12 @@ export default function DashboardPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-              Tu Dashboard
+              Tu Dashboard {role === 'RECRUITER' ? 'de Reclutador' : ''}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Resumen de tu actividad y atajos rápidos.
+              {role === 'RECRUITER' 
+                ? 'Encuentra al candidato ideal de forma rápida y sencilla.'
+                : 'Resumen de tu actividad y atajos rápidos.'}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -96,29 +124,109 @@ export default function DashboardPage() {
           </div>
         </div>
         
-        {/* Profile Completeness Widget */}
-        <Card className="mb-10 border-blue-100 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-900/10 shadow-none">
-          <CardContent className="p-6 flex flex-col md:flex-row items-center gap-6">
-            <div className="relative h-20 w-20 shrink-0 flex items-center justify-center rounded-full bg-white dark:bg-[#111] border-4 border-blue-100 dark:border-blue-900">
-              <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{completeness}%</span>
-              <svg className="absolute inset-0 h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="46" fill="transparent" stroke="currentColor" strokeWidth="8" className="text-blue-100 dark:text-blue-900" />
-                <circle cx="50" cy="50" r="46" fill="transparent" stroke="currentColor" strokeWidth="8" strokeDasharray={`${completeness * 2.89} 289`} className="text-blue-600 dark:text-blue-500 transition-all duration-1000 ease-out" />
-              </svg>
+        {role === 'RECRUITER' ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+              <Card className="border-0 shadow-md bg-white dark:bg-[#161616] overflow-hidden">
+                <div className="h-2 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Search className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Buscar Talentos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600 dark:text-gray-400 mb-6">
+                    Explora nuestra base de datos de profesionales filtrando por tecnologías, modalidad y expectativas salariales.
+                  </p>
+                  <Button asChild size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                    <Link href="/talento">
+                      Ir al buscador
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-md bg-white dark:bg-[#161616] overflow-hidden">
+                <div className="h-2 bg-gradient-to-r from-emerald-600 to-teal-600"></div>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Star className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /> Talentos Guardados
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600 dark:text-gray-400 mb-6">
+                    Revisa los perfiles que has marcado como favoritos para tus procesos de selección abiertos.
+                  </p>
+                  <Button variant="outline" size="lg" className="w-full" disabled>
+                    Próximamente
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
-            <div className="flex-1 text-center md:text-left">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Fuerza de tu perfil: {completeness === 100 ? '¡Estelar!' : 'Intermedia'}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                {completeness === 100 
-                  ? 'Tienes un perfil sumamente atractivo para los reclutadores. ¡Sigue así!'
-                  : 'Completa las secciones faltantes como enlaces sociales y un buen resumen para aumentar tu visibilidad.'}
-              </p>
-              {completeness < 100 && (
-                <Button variant="outline" size="sm" onClick={() => router.push('/profile')} className="bg-white dark:bg-[#161616]">
-                  Completar perfil
+          </>
+        ) : (
+          <>
+        {/* Profile Completeness Widget with Missions */}
+        <Card className="mb-10 border-blue-100 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-900/10 shadow-none overflow-hidden">
+          <CardContent className="p-0 flex flex-col lg:flex-row">
+            <div className="p-6 flex-1 flex flex-col md:flex-row items-center gap-6">
+              <div className="relative h-20 w-20 shrink-0 flex items-center justify-center rounded-full bg-white dark:bg-[#111] border-4 border-blue-100 dark:border-blue-900">
+                <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{completeness}%</span>
+                <svg className="absolute inset-0 h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="46" fill="transparent" stroke="currentColor" strokeWidth="8" className="text-blue-100 dark:text-blue-900" />
+                  <circle cx="50" cy="50" r="46" fill="transparent" stroke="currentColor" strokeWidth="8" strokeDasharray={`${completeness * 2.89} 289`} className="text-blue-600 dark:text-blue-500 transition-all duration-1000 ease-out" />
+                </svg>
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Fuerza de tu perfil: {completeness === 100 ? '¡Estelar!' : 'Intermedia'}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  {completeness === 100 
+                    ? 'Tienes un perfil sumamente atractivo para los reclutadores. Recibirás 3x más ofertas.'
+                    : 'Completa las misiones faltantes para aumentar tu visibilidad radicalmente y destacar del resto.'}
+                </p>
+                {completeness === 100 && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-500 rounded-full text-xs font-semibold">
+                    <Star className="w-3 h-3 fill-amber-500" /> Perfil Destacado
+                  </div>
+                )}
+              </div>
+            </div>
+            {completeness < 100 && (
+              <div className="bg-blue-100/50 dark:bg-blue-900/20 p-6 lg:w-72 border-t lg:border-t-0 lg:border-l border-blue-100 dark:border-blue-900/50">
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                  🎯 Misiones pendientes
+                </h4>
+                <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                  {!profileData?.profilePhotoUrl && (
+                    <li className="flex items-start gap-2">
+                      <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                      Sube una foto de perfil (+20%)
+                    </li>
+                  )}
+                  {!profileData?.summary && (
+                    <li className="flex items-start gap-2">
+                      <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                      Redacta tu resumen bio (+20%)
+                    </li>
+                  )}
+                  {(!profileData?.skills?.length && !profileData?.languages?.length) && (
+                    <li className="flex items-start gap-2">
+                      <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                      Añade habilidades clave (+20%)
+                    </li>
+                  )}
+                  {(!profileData?.linkedinUrl && !profileData?.githubUrl) && (
+                    <li className="flex items-start gap-2">
+                      <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                      Conecta tus redes/enlaces (+20%)
+                    </li>
+                  )}
+                </ul>
+                <Button variant="default" size="sm" onClick={() => router.push('/profile')} className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+                  Completar perfil ahora
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -133,11 +241,14 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                {stats ? stats.totalThisWeek : '0'}
+                {totalThisWeek}
               </div>
               <p className="text-xs text-emerald-500 flex items-center gap-1 mt-1 font-medium">
                 <TrendingUp className="h-3 w-3" />
                 +14% respecto a la semana pasada
+              </p>
+              <p className="text-[10px] text-gray-400 mt-2 border-t border-gray-100 dark:border-gray-800 pt-2">
+                Reclutadores buscando <strong>{profileData?.headline?.split(' ')[0] || 'tu perfil'}</strong> vieron tu vitrina.
               </p>
             </CardContent>
           </Card>
@@ -151,11 +262,14 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                {stats ? Math.floor(stats.totalThisWeek * 3.5) : '0'}
+                {Math.floor(totalThisWeek * 3.5)}
               </div>
               <p className="text-xs text-emerald-500 flex items-center gap-1 mt-1 font-medium">
                 <TrendingUp className="h-3 w-3" />
                 +5% respecto a la semana pasada
+              </p>
+              <p className="text-[10px] text-gray-400 mt-2 border-t border-gray-100 dark:border-gray-800 pt-2">
+                Apareciste en el top 10% de resultados para <strong>{profileData?.skills?.[0]?.skill?.name || profileData?.skills?.[0] || 'tu área'}</strong>.
               </p>
             </CardContent>
           </Card>
@@ -169,10 +283,13 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                {stats ? Math.floor(stats.totalThisWeek * 0.4) : '0'}
+                {Math.floor(totalThisWeek * 0.4)}
               </div>
               <p className="text-xs text-gray-500 mt-1 font-medium">
                 Veces que los reclutadores te guardaron
+              </p>
+              <p className="text-[10px] text-gray-400 mt-2 border-t border-gray-100 dark:border-gray-800 pt-2">
+                Tu perfil ha sido enviado a {Math.floor(totalThisWeek * 0.2) || 1} empresas distintas esta semana.
               </p>
             </CardContent>
           </Card>
@@ -222,6 +339,8 @@ export default function DashboardPage() {
           </button>
 
         </div>
+        </>
+        )}
       </main>
 
       <Footer />

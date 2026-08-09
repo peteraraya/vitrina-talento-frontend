@@ -50,6 +50,33 @@ export function useProfileQueries() {
     enabled: isAuthenticated,
   });
 
+  // Mutation for Photo Upload
+  const uploadPhotoMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // fetchApi usa application/json por defecto, debemos eliminar el header para multipart/form-data
+      // para que fetch calcule el boundary automáticamente.
+      const { accessToken } = useAuthStore.getState();
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api/v1';
+      
+      const res = await fetch(`${API_BASE_URL}/profiles/me/photo`, {
+        method: 'POST',
+        headers: {
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error('Fallo al subir la imagen de perfil');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile', 'me'] });
+    },
+  });
+
   // Mutation for Profile Update
   const updateProfileMutation = useMutation({
     mutationFn: async (values: ProfileFormValues) => {
@@ -101,5 +128,6 @@ export function useProfileQueries() {
     updateProfileMutation,
     updateVisibilityMutation,
     updateAvailabilityMutation,
+    uploadPhotoMutation,
   };
 }
