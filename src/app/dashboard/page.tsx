@@ -20,12 +20,13 @@ export default function DashboardPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
 
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api/v1';
+  const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+
   const downloadCV = async () => {
     if (!accessToken) return;
     try {
       setIsDownloading(true);
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api/v1';
-      const baseUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
       
       const response = await fetch(`${baseUrl}/profiles/me/export-pdf`, {
         method: 'GET',
@@ -302,12 +303,11 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
-              {/* MAIN CONTENT (Left Column) */}
-              <div className="col-span-1 lg:col-span-2 space-y-6">
-                
-                {/* Profile Completeness Widget */}
+              {/* Top Row: Profile Completeness & Stats */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="col-span-1 lg:col-span-2">
+                  
+                  {/* Profile Completeness Widget */}
                 <Card className="border border-gray-100 dark:border-gray-800 shadow-xl shadow-blue-900/5 bg-white dark:bg-[#111] overflow-hidden rounded-2xl">
                   <CardContent className="p-0 flex flex-col">
                     <div className="p-8 flex items-center gap-6 border-b border-gray-100 dark:border-gray-800">
@@ -349,11 +349,54 @@ export default function DashboardPage() {
                     )}
                   </CardContent>
                 </Card>
+                </div>
 
-                {/* Herramientas Principales */}
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Tus herramientas</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* SIDEBAR (Right Column) */}
+                <div className="col-span-1 space-y-4">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Tus Estadísticas</h2>
+                  
+                  <Card className="border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#111] rounded-2xl">
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                        <Eye className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Vistas de Perfil</h3>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">{viewsCount}</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#111] rounded-2xl">
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                        <SearchIcon className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Apariciones Búsqueda</h3>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">{searchCount}</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#111] rounded-2xl">
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+                        <Share2 className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Tarjetas Compartidas</h3>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">{sharesCount}</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Herramientas Principales (Full Width) */}
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Tus herramientas</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     
                     <button 
                       onClick={() => router.push('/dashboard/applications')}
@@ -449,8 +492,8 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* API para Developers (Movido abajo) */}
-                <Card className="border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#111] overflow-hidden rounded-2xl mt-6">
+                {/* API para Developers */}
+                <Card className="border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#111] overflow-hidden rounded-2xl">
                   <CardContent className="p-0 flex flex-col md:flex-row">
                     <div className="p-6 md:p-8 flex-1">
                       <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
@@ -463,62 +506,108 @@ export default function DashboardPage() {
                         <pre className="text-xs font-mono text-gray-300">
                           <code className="language-javascript">
 <span className="text-pink-400">const</span> <span className="text-blue-300">fetchMyProfile</span> <span className="text-pink-400">=</span> <span className="text-pink-400">async</span> () <span className="text-pink-400">{'=>'}</span> &#123;{'\n'}
-  <span className="text-pink-400">const</span> res <span className="text-pink-400">=</span> <span className="text-pink-400">await</span> <span className="text-blue-300">fetch</span>(<span className="text-green-300">'https://api.vitrinatuempleo.com/v1/profiles/{profileData?.slug || 'tu-slug'}'</span>);{'\n'}
+  <span className="text-pink-400">const</span> res <span className="text-pink-400">=</span> <span className="text-pink-400">await</span> <span className="text-blue-300">fetch</span>(<span className="text-green-300">'{baseUrl}/profiles/{profileData?.slug || 'tu-slug'}'</span>);{'\n'}
   <span className="text-blue-300">console</span>.<span className="text-blue-300">log</span>(<span className="text-pink-400">await</span> res.<span className="text-blue-300">json</span>());{'\n'}
 &#125;;
                           </code>
                         </pre>
                       </div>
                     </div>
+
+                    {/* Right Side: Instructions & JSON Link */}
+                    <div className="bg-gray-50 dark:bg-[#161616] p-6 md:p-8 flex-1 flex flex-col justify-center border-t md:border-t-0 md:border-l border-gray-100 dark:border-gray-800">
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        💡 Cómo usar el endpoint
+                      </h4>
+                      <ul className="space-y-3 text-sm text-gray-600 dark:text-gray-300 mb-8">
+                        <li className="flex items-start gap-2">
+                          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                          Obtén toda la información de tu perfil público (experiencia, stack técnico, resumen).
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                          Ideal para integrarlo dinámicamente en tu portafolio web personal usando fetch.
+                        </li>
+                      </ul>
+                      
+                      <Button asChild variant="outline" className="w-full bg-white dark:bg-[#0A0A0A] border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#111] hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                        <a href={`${baseUrl}/profiles/${profileData?.slug || 'tu-slug'}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
+                          <ExternalLink className="w-4 h-4" /> Ver respuesta JSON
+                        </a>
+                      </Button>
+                    </div>
+
                   </CardContent>
                 </Card>
 
+              {/* Market Intelligence (Termómetro Salarial) */}
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Inteligencia de Mercado</h2>
+                <Card className="border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#111] overflow-hidden rounded-2xl relative">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-blue-500 to-indigo-600"></div>
+                  <CardContent className="p-6 md:p-8">
+                    <div className="flex flex-col md:flex-row gap-8 items-center">
+                      <div className="flex-1 w-full">
+                        <div className="flex justify-between items-end mb-4">
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                              <TrendingUp className="w-5 h-5 text-indigo-500" /> Termómetro Salarial
+                            </h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              Comparativa basada en tu rol ({profileData?.headline?.split(' ')[0] || 'Profesional'}) y ubicación.
+                            </p>
+                          </div>
+                          <div className="text-right hidden sm:block">
+                            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-full">
+                              +14% vs Mercado
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Progress Bar / Gauge */}
+                        <div className="relative pt-6 pb-2">
+                          <div className="h-4 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex">
+                            <div className="h-full bg-gray-300 dark:bg-gray-600 w-[20%]"></div>
+                            <div className="h-full bg-blue-500 dark:bg-blue-600 w-[45%] relative">
+                              {/* Promedio Marker */}
+                              <div className="absolute right-0 top-0 h-full w-1 bg-white dark:bg-black z-10"></div>
+                            </div>
+                            <div className="h-full bg-indigo-500 dark:bg-indigo-600 w-[15%]"></div>
+                            <div className="h-full bg-gray-100 dark:bg-gray-800 w-[20%]"></div>
+                          </div>
+                          
+                          {/* Labels */}
+                          <div className="flex justify-between text-[10px] sm:text-xs text-gray-500 font-medium mt-3">
+                            <span>$1.500</span>
+                            <span className="absolute left-[65%] -translate-x-1/2 flex flex-col items-center">
+                              <span className="text-gray-900 dark:text-white font-bold">$2.800</span>
+                              <span>Promedio</span>
+                            </span>
+                            <span className="absolute left-[80%] -translate-x-1/2 flex flex-col items-center text-indigo-600 dark:text-indigo-400 font-bold">
+                              <span>$3.200</span>
+                              <span>Tu expectativa</span>
+                            </span>
+                            <span>$4.000+</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="w-full md:w-64 shrink-0 bg-indigo-50 dark:bg-indigo-900/10 p-5 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2">💡 Sugerencia</h4>
+                        <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+                          Tu expectativa está ligeramente por encima del promedio. Para justificar este valor, asegúrate de verificar tus habilidades técnicas críticas.
+                        </p>
+                        <Button asChild size="sm" variant="default" className="w-full text-xs h-8 bg-indigo-600 hover:bg-indigo-700 text-white">
+                          <Link href="/dashboard/assessments">
+                            Ir a Centro de Evaluación
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
-              {/* SIDEBAR (Right Column) */}
-              <div className="col-span-1 space-y-6">
-                
-                {/* Stats Cards Apiladas */}
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Tus Estadísticas</h2>
-                
-                <Card className="border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#111] rounded-2xl">
-                  <CardContent className="p-5 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
-                      <Eye className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Vistas de Perfil</h3>
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{viewsCount}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#111] rounded-2xl">
-                  <CardContent className="p-5 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-                      <SearchIcon className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Apariciones Búsqueda</h3>
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{searchCount}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#111] rounded-2xl">
-                  <CardContent className="p-5 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
-                      <Share2 className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Tarjetas Compartidas</h3>
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{sharesCount}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-              </div>
-            </div>
           </div>
         )}
       </main>

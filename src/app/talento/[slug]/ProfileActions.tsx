@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Mail, Bookmark, BookmarkCheck, Link2, FileText, Loader2 } from 'lucide-react';
+import { Mail, Bookmark, BookmarkCheck, Link2, FileText, Loader2, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useAuthStore } from '@/store/useAuthStore';
 import { toast } from 'sonner';
@@ -11,9 +11,10 @@ type ProfileActionsProps = {
   isAnonymized: boolean;
   contactEmail?: string;
   linkedinUrl?: string;
+  whatsappNumber?: string;
 };
 
-export function ProfileActions({ slug, isAnonymized, contactEmail, linkedinUrl }: ProfileActionsProps) {
+export function ProfileActions({ slug, isAnonymized, contactEmail, linkedinUrl, whatsappNumber }: ProfileActionsProps) {
   const { role, isAuthenticated, accessToken, _hasHydrated } = useAuthStore();
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -247,7 +248,7 @@ export function ProfileActions({ slug, isAnonymized, contactEmail, linkedinUrl }
 
   return (
     <div className="flex flex-col items-end gap-3 w-full sm:w-auto">
-      <div className="flex items-center gap-3 w-full sm:w-auto">
+      <div className="flex flex-wrap justify-end items-center gap-3 w-full sm:w-auto">
       {role === 'RECRUITER' && (
         <>
           <Button 
@@ -280,6 +281,14 @@ export function ProfileActions({ slug, isAnonymized, contactEmail, linkedinUrl }
       
       {role === 'RECRUITER' ? (
         <>
+          {!isAnonymized && whatsappNumber && (
+            <Button asChild className="gap-2 flex-1 sm:flex-none bg-[#25D366] hover:bg-[#25D366]/90 text-white shadow-md border-0">
+              <a href={`https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('¡Hola! Vi tu perfil en Vitrina tu Empleo y me interesaría conversar contigo sobre una oportunidad laboral.')}`} target="_blank" rel="noopener noreferrer">
+                <MessageSquare className="w-4 h-4" /> WhatsApp
+              </a>
+            </Button>
+          )}
+
           <Button 
             className="gap-2 flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 text-white shadow-md border-0"
             onClick={() => { setShowJobForm(!showJobForm); setShowContactForm(false); }}
@@ -295,22 +304,38 @@ export function ProfileActions({ slug, isAnonymized, contactEmail, linkedinUrl }
             {isAnonymized ? 'Contacto Ciego' : 'Enviar Propuesta'}
           </Button>
         </>
-      ) : !isAnonymized && contactEmail ? (
-        <Button asChild className="gap-2 flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white shadow-md">
-          <a href={`mailto:${contactEmail}`}>
-            <Mail className="w-4 h-4" /> Contactar
-          </a>
-        </Button>
-      ) : !isAnonymized && linkedinUrl ? (
-        <Button asChild className="gap-2 flex-1 sm:flex-none bg-[#0A66C2] hover:bg-[#0A66C2]/90 text-white shadow-md">
-          <a href={linkedinUrl} target="_blank" rel="noopener noreferrer">
-            <Link2 className="w-4 h-4" /> Ver LinkedIn
-          </a>
-        </Button>
       ) : (
-        <Button className="gap-2 flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white shadow-md" disabled>
-          <Mail className="w-4 h-4" /> Perfil Privado
-        </Button>
+        <>
+          {!isAnonymized && whatsappNumber && (
+            <Button asChild className="gap-2 flex-1 sm:flex-none bg-[#25D366] hover:bg-[#25D366]/90 text-white shadow-md">
+              <a href={`https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('¡Hola! Vi tu perfil profesional y me gustaría contactarte.')}`} target="_blank" rel="noopener noreferrer">
+                <MessageSquare className="w-4 h-4" /> WhatsApp
+              </a>
+            </Button>
+          )}
+
+          {!isAnonymized && contactEmail && (
+            <Button asChild className="gap-2 flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white shadow-md">
+              <a href={`mailto:${contactEmail}`}>
+                <Mail className="w-4 h-4" /> Contactar
+              </a>
+            </Button>
+          )}
+          
+          {!isAnonymized && linkedinUrl && (
+            <Button asChild className="gap-2 flex-1 sm:flex-none bg-[#0A66C2] hover:bg-[#0A66C2]/90 text-white shadow-md">
+              <a href={linkedinUrl} target="_blank" rel="noopener noreferrer">
+                <Link2 className="w-4 h-4" /> LinkedIn
+              </a>
+            </Button>
+          )}
+          
+          {(isAnonymized || (!contactEmail && !linkedinUrl && !whatsappNumber)) && (
+            <Button className="gap-2 flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white shadow-md" disabled>
+              <Mail className="w-4 h-4" /> Perfil Privado
+            </Button>
+          )}
+        </>
       )}
       </div>
 

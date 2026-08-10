@@ -7,3 +7,6 @@ export * from './select';
 export * from './textarea';
 export * from './sonner';
 export * from './skeleton';
+export * from './popover';
+export * from './month-picker';
+export * from './dialog';

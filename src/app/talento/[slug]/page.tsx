@@ -48,7 +48,55 @@ export default async function PublicProfilePage({ params }: Props) {
       displayName: 'Juan Pérez (Mock Público)',
       headline: 'Desarrollador Frontend Senior',
       summary: 'Perfil mock de prueba para recorrer toda la app sin backend.',
-      skills: [{ skill: { name: 'React' } }, { skill: { name: 'Next.js' } }],
+      skills: [
+        { skill: { name: 'React' }, verified: true }, 
+        { skill: { name: 'Next.js' } },
+        { skill: { name: 'TypeScript' }, verified: true }
+      ],
+      experiences: [
+        {
+          company: 'Tech Corp',
+          position: 'Senior Frontend Developer',
+          startDate: 'Ene 2021',
+          endDate: '',
+          current: true,
+          description: 'Liderazgo del equipo frontend, optimización de rendimiento y migración a Next.js.',
+        },
+        {
+          company: 'Agencia Digital',
+          position: 'Web Developer',
+          startDate: 'Mar 2018',
+          endDate: 'Dic 2020',
+          current: false,
+          description: 'Desarrollo de sitios web corporativos y e-commerce usando React y TailwindCSS.',
+        }
+      ],
+      educations: [
+        {
+          institution: 'Universidad de Chile',
+          degree: 'Ingeniería en Computación',
+        }
+      ],
+      certifications: [
+        {
+          name: 'AWS Certified Solutions Architect',
+          issuer: 'Amazon Web Services',
+        }
+      ],
+      languages: [
+        { name: 'Inglés', level: 'Avanzado' },
+        { name: 'Español', level: 'Nativo' }
+      ],
+      portfolioItems: [
+        {
+          title: 'E-commerce React',
+          description: 'Plataforma de ventas con carrito y pasarela de pago.',
+          projectUrl: 'https://github.com'
+        }
+      ],
+      contactEmail: 'juan@mock.com',
+      whatsappNumber: '+56912345678',
+      linkedinUrl: 'https://linkedin.com'
     };
   } else {
     // Normalizamos la URL base eliminando barras finales
@@ -98,6 +146,7 @@ export default async function PublicProfilePage({ params }: Props) {
             isAnonymized={isAnonymized} 
             contactEmail={profile.contactEmail} 
             linkedinUrl={profile.linkedinUrl} 
+            whatsappNumber={profile.whatsappNumber}
           />
         </div>
 
@@ -131,14 +180,135 @@ export default async function PublicProfilePage({ params }: Props) {
 
           <div className="mb-8">
             <h2 className="text-xl font-semibold mb-4">Habilidades Principales</h2>
-            <div className="flex flex-wrap gap-2">
-              {profile.skills?.map((s: any) => (
-                <span key={s.skill.name || s.name || s} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm">
-                  {s.skill.name || s.name || s}
-                </span>
-              ))}
+            <div className="flex flex-wrap gap-3">
+              {profile.skills?.map((s: any) => {
+                const skillName = s.skill?.name || s.name || s;
+                const isVerified = s.verified === true;
+                
+                if (isVerified) {
+                  return (
+                    <div key={skillName} className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-full text-sm font-medium text-blue-700 dark:text-blue-300 shadow-sm" title="Habilidad Verificada Oficialmente">
+                      <span className="flex items-center justify-center bg-blue-500 text-white rounded-full w-3.5 h-3.5 text-[8px]">✓</span>
+                      {skillName}
+                    </div>
+                  );
+                }
+
+                return (
+                  <span key={skillName} className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm border border-transparent">
+                    {skillName}
+                  </span>
+                );
+              })}
             </div>
           </div>
+
+          {profile.experiences && profile.experiences.length > 0 && (
+            <div className="mt-12">
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-blue-500" /> Experiencia Laboral
+              </h2>
+              <div className="relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 md:ml-4 space-y-8">
+                {profile.experiences.map((exp: any, idx: number) => (
+                  <div key={idx} className="relative pl-6 md:pl-8">
+                    <div className="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-blue-500 border-4 border-white dark:border-gray-800"></div>
+                    <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between mb-1">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">{exp.position}</h3>
+                      <span className="text-sm font-medium text-blue-600 dark:text-blue-400 mt-1 sm:mt-0 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-0.5 rounded-full w-fit">
+                        {exp.startDate ? new Date(exp.startDate).toLocaleDateString('es-ES', { month: 'short', year: 'numeric', timeZone: 'UTC' }) : 'N/A'} - {exp.current ? 'Presente' : (exp.endDate ? new Date(exp.endDate).toLocaleDateString('es-ES', { month: 'short', year: 'numeric', timeZone: 'UTC' }) : 'N/A')}
+                      </span>
+                    </div>
+                    <h4 className="text-md font-medium text-gray-600 dark:text-gray-400 mb-3">{exp.company}</h4>
+                    {exp.description && (
+                      <p className="text-gray-600 dark:text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">
+                        {exp.description}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {profile.educations && profile.educations.length > 0 && (
+            <div className="mt-12">
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-orange-500" /> Educación
+              </h2>
+              <div className="relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 md:ml-4 space-y-8">
+                {profile.educations.map((edu: any, idx: number) => (
+                  <div key={idx} className="relative pl-6 md:pl-8">
+                    <div className="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-orange-500 border-4 border-white dark:border-gray-800"></div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">{edu.degree}</h3>
+                    <h4 className="text-md font-medium text-gray-600 dark:text-gray-400">{edu.institution}</h4>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {profile.certifications && profile.certifications.length > 0 && (
+            <div className="mt-12">
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                <Star className="w-5 h-5 text-purple-500" /> Certificaciones
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {profile.certifications.map((cert: any, idx: number) => (
+                  <div key={idx} className="p-4 border border-gray-100 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-[#111]">
+                    <h3 className="font-bold text-gray-900 dark:text-white">{cert.name}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{cert.issuer}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {profile.languages && profile.languages.length > 0 && (
+            <div className="mt-12">
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                <Star className="w-5 h-5 text-emerald-500" /> Idiomas
+              </h2>
+              <div className="flex flex-wrap gap-4">
+                {profile.languages.map((lang: any, idx: number) => (
+                  <div key={idx} className="flex flex-col items-center justify-center p-4 border border-gray-100 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-[#111] min-w-[120px]">
+                    <span className="font-bold text-gray-900 dark:text-white">{lang.name}</span>
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full mt-2">
+                      {lang.level}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {profile.portfolioItems && profile.portfolioItems.length > 0 && (
+            <div className="mt-12">
+              <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-cyan-500" /> Portafolio y Proyectos
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {profile.portfolioItems.map((port: any, idx: number) => (
+                  <div key={idx} className="border border-gray-100 dark:border-gray-800 rounded-xl bg-white dark:bg-[#161616] overflow-hidden shadow-sm flex flex-col">
+                    {port.imageUrl && (
+                      <div className="relative h-40 w-full bg-gray-100 dark:bg-gray-800">
+                        <Image src={port.imageUrl} alt={port.title} fill className="object-cover" />
+                      </div>
+                    )}
+                    <div className="p-5 flex-1 flex flex-col">
+                      <h3 className="font-bold text-gray-900 dark:text-white mb-2">{port.title}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 flex-1">{port.description}</p>
+                      {port.projectUrl && (
+                        <a href={port.projectUrl.startsWith('http') ? port.projectUrl : `https://${port.projectUrl}`} target="_blank" rel="noopener noreferrer" className="mt-4 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                          Ver proyecto <Link2 className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* Similar Profiles Section */}

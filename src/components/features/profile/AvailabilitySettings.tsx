@@ -97,9 +97,17 @@ export function AvailabilitySettings({ form, mutation }: Props) {
                 name="currency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Moneda (Ej: USD)</FormLabel>
+                    <FormLabel>Moneda</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ej. USD, CLP, EUR" {...field} />
+                      <Select {...field}>
+                        <option value="CLP">CLP - Peso Chileno</option>
+                        <option value="USD">USD - Dólar Estadounidense</option>
+                        <option value="EUR">EUR - Euro</option>
+                        <option value="MXN">MXN - Peso Mexicano</option>
+                        <option value="COP">COP - Peso Colombiano</option>
+                        <option value="PEN">PEN - Sol Peruano</option>
+                        <option value="ARS">ARS - Peso Argentino</option>
+                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

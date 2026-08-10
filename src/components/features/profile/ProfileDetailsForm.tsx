@@ -5,9 +5,9 @@ import { UseMutationResult } from '@tanstack/react-query';
 import { ProfileFormValues } from '@/schemas/profile.schema';
 import { 
   Card, CardContent, CardHeader, CardTitle,
-  Button, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input, Select, Textarea
+  Button, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input, Select, Textarea, MonthPicker
 } from '@/components/ui';
-import { Camera, Link2, Globe, User, Languages, GraduationCap, Award, FileBadge, Briefcase, Users, Plus, Trash2, Copy, ExternalLink, CheckCircle2, X } from 'lucide-react';
+import { Camera, Link2, Globe, User, Languages, GraduationCap, Award, FileBadge, Briefcase, Users, Plus, Trash2, Copy, ExternalLink, CheckCircle2, X, Pencil, FileText, Sparkles, DownloadCloud, ArrowUp, ArrowDown } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
@@ -62,11 +62,17 @@ export function ProfileDetailsForm({ form, mutation, uploadPhotoMutation, profil
     }
   };
 
-  const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({ control: form.control, name: "educations" });
-  const { fields: certFields, append: appendCert, remove: removeCert } = useFieldArray({ control: form.control, name: "certifications" });
-  const { fields: portfolioFields, append: appendPortfolio, remove: removePortfolio } = useFieldArray({ control: form.control, name: "portfolioItems" });
+  const { fields: eduFields, append: appendEdu, remove: removeEdu, swap: swapEdu } = useFieldArray({ control: form.control, name: "educations" });
+  const { fields: expFields, append: appendExp, remove: removeExp } = useFieldArray({ control: form.control, name: "experiences" });
+  const { fields: certFields, append: appendCert, remove: removeCert, swap: swapCert } = useFieldArray({ control: form.control, name: "certifications" });
+  const { fields: portfolioFields, append: appendPortfolio, remove: removePortfolio, swap: swapPortfolio } = useFieldArray({ control: form.control, name: "portfolioItems" });
   const { fields: refFields, append: appendRef, remove: removeRef } = useFieldArray({ control: form.control, name: "references" });
   const { fields: licenseFields, append: appendLicense, remove: removeLicense } = useFieldArray({ control: form.control, name: "licenses" });
+
+  const [editingExp, setEditingExp] = useState<Record<string, boolean>>({});
+  const [editingEdu, setEditingEdu] = useState<Record<string, boolean>>({});
+  const [editingCert, setEditingCert] = useState<Record<string, boolean>>({});
+  const [editingPortfolio, setEditingPortfolio] = useState<Record<string, boolean>>({});
 
   // Manejo de Skills como Tags
   const [skillInput, setSkillInput] = useState("");
@@ -106,6 +112,17 @@ export function ProfileDetailsForm({ form, mutation, uploadPhotoMutation, profil
         <p className="text-blue-100 mt-1 text-sm">Completa cada sección para aumentar tu visibilidad ante las mejores empresas.</p>
       </div>
       <CardContent className="p-6 md:p-8">
+        
+        {/* Magic Autocomplete Buttons */}
+        <div className="mb-8 flex flex-col sm:flex-row gap-4">
+          <Button type="button" variant="outline" className="flex-1 border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-100 hover:text-blue-800 rounded-xl" onClick={() => toast.info('Función en desarrollo: Extracción de datos de PDF con IA')}>
+             <FileText className="w-4 h-4 mr-2" /> Autocompletar con mi CV (PDF)
+          </Button>
+          <Button type="button" variant="outline" className="flex-1 border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100 hover:text-indigo-800 rounded-xl" onClick={() => toast.info('Función en desarrollo: Integración con API de LinkedIn')}>
+             <DownloadCloud className="w-4 h-4 mr-2" /> Importar desde LinkedIn
+          </Button>
+        </div>
+
         <Form {...form}>
           <form 
             onSubmit={form.handleSubmit(
@@ -242,7 +259,12 @@ export function ProfileDetailsForm({ form, mutation, uploadPhotoMutation, profil
                 name="summary"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Resumen (Bio)</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Resumen (Bio)</FormLabel>
+                      <button type="button" onClick={() => toast.info('Función en desarrollo: Generación de textos con IA')} className="text-xs text-purple-600 dark:text-purple-400 font-medium flex items-center gap-1 hover:underline">
+                        <Sparkles className="w-3 h-3" /> Mejorar con IA
+                      </button>
+                    </div>
                     <FormControl>
                       <Textarea
                         {...field}
@@ -339,7 +361,26 @@ export function ProfileDetailsForm({ form, mutation, uploadPhotoMutation, profil
                   <svg fill="none" height="20" shapeRendering="geometricPrecision" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="20"><path d="M6 9l6 6 6-6"></path></svg>
                 </span>
               </summary>
-              <div className="pt-6 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+              <div className="pt-6 space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                
+                {/* Banner Habilidades Verificadas */}
+                <div className="bg-gradient-to-r from-indigo-900 to-blue-900 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg">
+                  <div className="flex items-center gap-4 text-white flex-1">
+                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center shrink-0 border border-white/20">
+                      <CheckCircle2 className="w-6 h-6 text-blue-300" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-lg mb-1">Destaca con Habilidades Verificadas</h4>
+                      <p className="text-blue-100 text-sm">
+                        Los reclutadores confían 3x más en perfiles con insignias oficiales. Realiza nuestros tests técnicos y certifica tus conocimientos.
+                      </p>
+                    </div>
+                  </div>
+                  <Button type="button" onClick={() => window.location.href = '/dashboard/assessments'} className="w-full md:w-auto bg-white text-indigo-900 hover:bg-gray-100 font-semibold shrink-0">
+                    Ir al Centro de Evaluación
+                  </Button>
+                </div>
+
                 <div className="flex flex-col gap-4">
                   <div className="flex gap-2">
                     <Input 
@@ -728,6 +769,226 @@ export function ProfileDetailsForm({ form, mutation, uploadPhotoMutation, profil
               </div>
             </details>
 
+            {/* Experiencia */}
+            <details className="group [&_summary::-webkit-details-marker]:hidden pt-4">
+              <summary className="flex cursor-pointer items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-800 hover:opacity-80 transition-opacity">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg shadow-inner">
+                    <Briefcase className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400">Experiencia Laboral</h3>
+                    <p className="text-xs text-gray-500">Tu trayectoria profesional detallada.</p>
+                  </div>
+                </div>
+                <span className="transition duration-300 group-open:-rotate-180 p-2 bg-gray-50 dark:bg-gray-800 rounded-full text-gray-500">
+                  <svg fill="none" height="20" shapeRendering="geometricPrecision" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="20"><path d="M6 9l6 6 6-6"></path></svg>
+                </span>
+              </summary>
+              <div className="pt-6 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                {expFields.length === 0 && (
+                  <div className="text-center py-12 bg-gray-50 dark:bg-[#111] border border-dashed border-gray-200 dark:border-gray-800 rounded-xl flex flex-col items-center justify-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <Briefcase className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-gray-900 dark:text-white font-medium">Sin experiencia registrada</p>
+                      <p className="text-gray-500 text-sm max-w-[250px] mx-auto mt-1">Agrega tu experiencia laboral para destacar frente a los reclutadores.</p>
+                    </div>
+                  </div>
+                )}
+                <div className={expFields.length > 0 ? "relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 md:ml-4 space-y-6 pb-4" : ""}>
+                {(() => {
+                  const watchedExperiences = form.watch('experiences') || [];
+                  const sortedIndices = expFields.map((field, index) => {
+                    return {
+                      index,
+                      field,
+                      isCurrent: watchedExperiences[index]?.current || false,
+                      startDate: watchedExperiences[index]?.startDate || '',
+                      endDate: watchedExperiences[index]?.endDate || ''
+                    };
+                  }).sort((a, b) => {
+                    if (a.isCurrent && !b.isCurrent) return -1;
+                    if (!a.isCurrent && b.isCurrent) return 1;
+                    if (a.endDate && b.endDate && a.endDate !== b.endDate) {
+                      return b.endDate.localeCompare(a.endDate);
+                    }
+                    if (a.startDate && b.startDate) {
+                      return b.startDate.localeCompare(a.startDate);
+                    }
+                    return 0;
+                  });
+
+                  return sortedIndices.map((item) => {
+                    const index = item.index;
+                    const field = item.field;
+                    const exp = watchedExperiences[index];
+                    const isEditing = editingExp[field.id] || !exp?.company;
+
+                    return (
+                      <div key={field.id} className="relative pl-6 md:pl-8 group">
+                        <div className="absolute -left-[9px] top-6 w-4 h-4 rounded-full bg-blue-500 border-4 border-white dark:border-gray-800"></div>
+                        
+                        {!isEditing ? (
+                          <div className="p-5 bg-white dark:bg-[#161616] border border-gray-100 dark:border-gray-800 shadow-sm rounded-xl relative hover:border-blue-200 transition-colors">
+                            <button 
+                              type="button" 
+                              className="absolute top-4 right-12 p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                              onClick={() => setEditingExp({ ...editingExp, [field.id]: true })}
+                              title="Editar experiencia"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button 
+                              type="button" 
+                              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                              onClick={() => removeExp(index)}
+                              title="Eliminar experiencia"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                            
+                            <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between mb-1">
+                              <h3 className="text-lg font-bold text-gray-900 dark:text-white pr-16">{exp.position}</h3>
+                              <span className="text-sm font-medium text-blue-600 dark:text-blue-400 mt-1 sm:mt-0 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-0.5 rounded-full w-fit">
+                                {exp.startDate ? new Date(exp.startDate).toLocaleDateString('es-ES', { month: 'short', year: 'numeric', timeZone: 'UTC' }) : 'N/A'} - {exp.current ? 'Presente' : (exp.endDate ? new Date(exp.endDate).toLocaleDateString('es-ES', { month: 'short', year: 'numeric', timeZone: 'UTC' }) : 'N/A')}
+                              </span>
+                            </div>
+                            <h4 className="text-md font-medium text-gray-600 dark:text-gray-400 mb-3">{exp.company}</h4>
+                            {exp.description && (
+                              <p className="text-gray-600 dark:text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">
+                                {exp.description}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="p-5 bg-blue-50/30 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900 shadow-sm rounded-xl relative group">
+                            <button 
+                              type="button" 
+                              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:ring-2 focus-visible:ring-red-500"
+                              onClick={() => removeExp(index)}
+                              aria-label="Eliminar experiencia"
+                              title="Eliminar experiencia"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                              <FormField
+                                control={form.control}
+                                name={`experiences.${index}.company`}
+                                render={({ field: formField }) => (
+                                  <FormItem>
+                                    <FormLabel>Empresa</FormLabel>
+                                    <FormControl><Input placeholder="Ej. Tech Corp" {...formField} /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name={`experiences.${index}.position`}
+                                render={({ field: formField }) => (
+                                  <FormItem>
+                                    <FormLabel>Cargo</FormLabel>
+                                    <FormControl><Input placeholder="Ej. Senior Frontend Developer" {...formField} /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name={`experiences.${index}.startDate`}
+                                render={({ field: formField }) => (
+                                  <FormItem>
+                                    <FormLabel>Fecha de inicio</FormLabel>
+                                    <FormControl>
+                                      <MonthPicker value={formField.value} onChange={formField.onChange} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name={`experiences.${index}.endDate`}
+                                render={({ field: formField }) => (
+                                  <FormItem>
+                                    <FormLabel>Fecha de término</FormLabel>
+                                    <FormControl>
+                                      <MonthPicker value={formField.value} onChange={formField.onChange} disabled={form.watch(`experiences.${index}.current`)} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name={`experiences.${index}.current`}
+                                render={({ field: formField }) => (
+                                  <FormItem className="md:col-span-2 flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 bg-gray-50 dark:bg-gray-800">
+                                    <FormControl>
+                                      <input 
+                                        type="checkbox" 
+                                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
+                                        checked={formField.value || false}
+                                        onChange={formField.onChange}
+                                      />
+                                    </FormControl>
+                                    <div className="space-y-1 leading-none">
+                                      <FormLabel>Actualmente trabajo aquí</FormLabel>
+                                    </div>
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name={`experiences.${index}.description`}
+                                render={({ field: formField }) => (
+                                  <FormItem className="md:col-span-2">
+                                    <div className="flex items-center justify-between">
+                                      <FormLabel>Descripción</FormLabel>
+                                      <button type="button" onClick={() => toast.info('Función en desarrollo: Generación de textos con IA')} className="text-xs text-purple-600 dark:text-purple-400 font-medium flex items-center gap-1 hover:underline">
+                                        <Sparkles className="w-3 h-3" /> Mejorar redacción ✨
+                                      </button>
+                                    </div>
+                                    <FormControl>
+                                      <Textarea placeholder="Describe tus responsabilidades y logros..." {...formField} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <div className="md:col-span-2 flex justify-end mt-2">
+                                <Button 
+                                  type="button" 
+                                  variant="secondary" 
+                                  onClick={() => {
+                                    if (exp.company && exp.position) {
+                                      setEditingExp({ ...editingExp, [field.id]: false });
+                                    } else {
+                                      toast.error("Empresa y Cargo son obligatorios");
+                                    }
+                                  }}
+                                >
+                                  Listo
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
+                </div>
+                
+                <button type="button" onClick={() => appendExp({ company: '', position: '', startDate: '', endDate: '', current: false, description: '' })} className="w-full py-4 border-2 border-dashed border-gray-200 dark:border-gray-800 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-blue-600 transition-colors">
+                  <Plus className="w-4 h-4" /> Añadir experiencia
+                </button>
+              </div>
+            </details>
+
             {/* Estudios */}
             <details className="group [&_summary::-webkit-details-marker]:hidden pt-4">
               <summary className="flex cursor-pointer items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-800 hover:opacity-80 transition-opacity">
@@ -756,43 +1017,106 @@ export function ProfileDetailsForm({ form, mutation, uploadPhotoMutation, profil
                     </div>
                   </div>
                 )}
-                {eduFields.map((field, index) => (
-                  <div key={field.id} className="p-5 bg-white dark:bg-[#161616] border border-gray-100 dark:border-gray-800 shadow-sm rounded-xl relative group">
-                    <button 
-                      type="button" 
-                      className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:ring-2 focus-visible:ring-red-500"
-                      onClick={() => removeEdu(index)}
-                      aria-label="Eliminar educación"
-                      title="Eliminar educación"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                      <FormField
-                        control={form.control}
-                        name={`educations.${index}.institution`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Institución</FormLabel>
-                            <FormControl><Input placeholder="Ej. Universidad de Chile" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`educations.${index}.degree`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Título</FormLabel>
-                            <FormControl><Input placeholder="Ej. Ingeniería en Software" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                <div className={eduFields.length > 0 ? "relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 md:ml-4 space-y-6 pb-4" : ""}>
+                {eduFields.map((field, index) => {
+                  const edu = form.watch(`educations.${index}`);
+                  const isEditing = editingEdu[field.id] || !edu?.institution;
+
+                  return (
+                    <div key={field.id} className="relative pl-6 md:pl-8 group">
+                      <div className="absolute -left-[9px] top-6 w-4 h-4 rounded-full bg-orange-500 border-4 border-white dark:border-gray-800"></div>
+                      
+                      {!isEditing ? (
+                        <div className="p-5 bg-white dark:bg-[#161616] border border-gray-100 dark:border-gray-800 shadow-sm rounded-xl relative hover:border-orange-200 transition-colors">
+                          <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                            {index > 0 && (
+                              <button type="button" onClick={() => swapEdu(index, index - 1)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors" title="Mover arriba">
+                                <ArrowUp className="w-4 h-4" />
+                              </button>
+                            )}
+                            {index < eduFields.length - 1 && (
+                              <button type="button" onClick={() => swapEdu(index, index + 1)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors" title="Mover abajo">
+                                <ArrowDown className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button 
+                              type="button" 
+                              className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors"
+                              onClick={() => setEditingEdu({ ...editingEdu, [field.id]: true })}
+                              title="Editar educación"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button 
+                              type="button" 
+                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+                              onClick={() => removeEdu(index)}
+                              title="Eliminar educación"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                          
+                          <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between mb-1">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white pr-24">{edu.degree}</h3>
+                          </div>
+                          <h4 className="text-md font-medium text-gray-600 dark:text-gray-400 mb-0">{edu.institution}</h4>
+                        </div>
+                      ) : (
+                        <div className="p-5 bg-orange-50/30 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900 shadow-sm rounded-xl relative group">
+                          <button 
+                            type="button" 
+                            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                            onClick={() => removeEdu(index)}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                            <FormField
+                              control={form.control}
+                              name={`educations.${index}.institution`}
+                              render={({ field: formField }) => (
+                                <FormItem>
+                                  <FormLabel>Institución</FormLabel>
+                                  <FormControl><Input placeholder="Ej. Universidad de Chile" {...formField} /></FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name={`educations.${index}.degree`}
+                              render={({ field: formField }) => (
+                                <FormItem>
+                                  <FormLabel>Título</FormLabel>
+                                  <FormControl><Input placeholder="Ej. Ingeniería en Software" {...formField} /></FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <div className="md:col-span-2 flex justify-end mt-2">
+                              <Button 
+                                type="button" 
+                                variant="secondary" 
+                                onClick={() => {
+                                  if (edu?.institution && edu?.degree) {
+                                    setEditingEdu({ ...editingEdu, [field.id]: false });
+                                  } else {
+                                    toast.error("Institución y Título son obligatorios");
+                                  }
+                                }}
+                              >
+                                Listo
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
+                </div>
                 
                 <button type="button" onClick={() => appendEdu({ institution: '', degree: '', fieldOfStudy: '' })} className="w-full py-4 border-2 border-dashed border-gray-200 dark:border-gray-800 hover:border-orange-500 hover:bg-orange-50/50 dark:hover:bg-orange-950/20 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-orange-600 transition-colors">
                   <Plus className="w-4 h-4" /> Añadir estudio
@@ -828,43 +1152,106 @@ export function ProfileDetailsForm({ form, mutation, uploadPhotoMutation, profil
                     </div>
                   </div>
                 )}
-                {certFields.map((field, index) => (
-                  <div key={field.id} className="p-5 bg-white dark:bg-[#161616] border border-gray-100 dark:border-gray-800 shadow-sm rounded-xl relative group">
-                    <button 
-                      type="button" 
-                      className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:ring-2 focus-visible:ring-red-500"
-                      onClick={() => removeCert(index)}
-                      aria-label="Eliminar certificación"
-                      title="Eliminar certificación"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                      <FormField
-                        control={form.control}
-                        name={`certifications.${index}.name`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nombre</FormLabel>
-                            <FormControl><Input placeholder="Ej. AWS Solutions Architect" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`certifications.${index}.issuer`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Emisor</FormLabel>
-                            <FormControl><Input placeholder="Ej. Amazon Web Services" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                <div className={certFields.length > 0 ? "relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 md:ml-4 space-y-6 pb-4" : ""}>
+                {certFields.map((field, index) => {
+                  const cert = form.watch(`certifications.${index}`);
+                  const isEditing = editingCert[field.id] || !cert?.name;
+
+                  return (
+                    <div key={field.id} className="relative pl-6 md:pl-8 group">
+                      <div className="absolute -left-[9px] top-6 w-4 h-4 rounded-full bg-purple-500 border-4 border-white dark:border-gray-800"></div>
+                      
+                      {!isEditing ? (
+                        <div className="p-5 bg-white dark:bg-[#161616] border border-gray-100 dark:border-gray-800 shadow-sm rounded-xl relative hover:border-purple-200 transition-colors">
+                          <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                            {index > 0 && (
+                              <button type="button" onClick={() => swapCert(index, index - 1)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors" title="Mover arriba">
+                                <ArrowUp className="w-4 h-4" />
+                              </button>
+                            )}
+                            {index < certFields.length - 1 && (
+                              <button type="button" onClick={() => swapCert(index, index + 1)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors" title="Mover abajo">
+                                <ArrowDown className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button 
+                              type="button" 
+                              className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors"
+                              onClick={() => setEditingCert({ ...editingCert, [field.id]: true })}
+                              title="Editar certificación"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button 
+                              type="button" 
+                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+                              onClick={() => removeCert(index)}
+                              title="Eliminar certificación"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                          
+                          <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between mb-1">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white pr-24">{cert.name}</h3>
+                          </div>
+                          <h4 className="text-md font-medium text-gray-600 dark:text-gray-400 mb-0">{cert.issuer}</h4>
+                        </div>
+                      ) : (
+                        <div className="p-5 bg-purple-50/30 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-900 shadow-sm rounded-xl relative group">
+                          <button 
+                            type="button" 
+                            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                            onClick={() => removeCert(index)}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                            <FormField
+                              control={form.control}
+                              name={`certifications.${index}.name`}
+                              render={({ field: formField }) => (
+                                <FormItem>
+                                  <FormLabel>Nombre</FormLabel>
+                                  <FormControl><Input placeholder="Ej. AWS Solutions Architect" {...formField} /></FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name={`certifications.${index}.issuer`}
+                              render={({ field: formField }) => (
+                                <FormItem>
+                                  <FormLabel>Emisor</FormLabel>
+                                  <FormControl><Input placeholder="Ej. Amazon Web Services" {...formField} /></FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <div className="md:col-span-2 flex justify-end mt-2">
+                              <Button 
+                                type="button" 
+                                variant="secondary" 
+                                onClick={() => {
+                                  if (cert?.name && cert?.issuer) {
+                                    setEditingCert({ ...editingCert, [field.id]: false });
+                                  } else {
+                                    toast.error("Nombre y Emisor son obligatorios");
+                                  }
+                                }}
+                              >
+                                Listo
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
+                </div>
                 
                 <button type="button" onClick={() => appendCert({ name: '', issuer: '', credentialUrl: '' })} className="w-full py-4 border-2 border-dashed border-gray-200 dark:border-gray-800 hover:border-purple-500 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-purple-600 transition-colors">
                   <Plus className="w-4 h-4" /> Añadir certificación
@@ -951,70 +1338,147 @@ export function ProfileDetailsForm({ form, mutation, uploadPhotoMutation, profil
                     </div>
                   </div>
                 )}
-                {portfolioFields.map((field, index) => (
-                  <div key={field.id} className="p-5 bg-white dark:bg-[#161616] border border-gray-100 dark:border-gray-800 shadow-sm rounded-xl relative group">
-                    <button 
-                      type="button" 
-                      className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:ring-2 focus-visible:ring-red-500"
-                      onClick={() => removePortfolio(index)}
-                      aria-label="Eliminar proyecto del portafolio"
-                      title="Eliminar proyecto"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                      <FormField
-                        control={form.control}
-                        name={`portfolioItems.${index}.title`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Título del Trabajo</FormLabel>
-                            <FormControl><Input placeholder="Ej. Remodelación de Casa" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`portfolioItems.${index}.imageUrl`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>URL de Fotografía (Opcional)</FormLabel>
-                            <FormControl>
-                              <div className="flex gap-2">
-                                <Input placeholder="https://..." {...field} />
-                                <Button 
-                                  type="button" variant="secondary" size="icon" className="shrink-0"
-                                  onClick={() => handleCopy(field.value || '', `img-${index}`)}
-                                >
-                                  {copiedStates[`img-${index}`] ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4 text-gray-500" />}
-                                </Button>
-                                <Button 
-                                  type="button" variant="secondary" size="icon" className="shrink-0"
-                                  onClick={() => handleOpenLink(field.value || '')} disabled={!field.value}
-                                >
-                                  <ExternalLink className="h-4 w-4 text-gray-500" />
-                                </Button>
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`portfolioItems.${index}.description`}
-                        render={({ field }) => (
-                          <FormItem className="md:col-span-2">
-                            <FormLabel>Descripción Breve</FormLabel>
-                            <FormControl><Textarea placeholder="Detalles de lo que hiciste..." {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                <div className={portfolioFields.length > 0 ? "relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 md:ml-4 space-y-6 pb-4" : ""}>
+                {portfolioFields.map((field, index) => {
+                  const port = form.watch(`portfolioItems.${index}`);
+                  const isEditing = editingPortfolio[field.id] || !port?.title;
+
+                  return (
+                    <div key={field.id} className="relative pl-6 md:pl-8 group">
+                      <div className="absolute -left-[9px] top-6 w-4 h-4 rounded-full bg-blue-500 border-4 border-white dark:border-gray-800"></div>
+                      
+                      {!isEditing ? (
+                        <div className="p-5 bg-white dark:bg-[#161616] border border-gray-100 dark:border-gray-800 shadow-sm rounded-xl relative hover:border-blue-200 transition-colors">
+                          <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                            {index > 0 && (
+                              <button type="button" onClick={() => swapPortfolio(index, index - 1)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors" title="Mover arriba">
+                                <ArrowUp className="w-4 h-4" />
+                              </button>
+                            )}
+                            {index < portfolioFields.length - 1 && (
+                              <button type="button" onClick={() => swapPortfolio(index, index + 1)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors" title="Mover abajo">
+                                <ArrowDown className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button 
+                              type="button" 
+                              className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors"
+                              onClick={() => setEditingPortfolio({ ...editingPortfolio, [field.id]: true })}
+                              title="Editar proyecto"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button 
+                              type="button" 
+                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+                              onClick={() => removePortfolio(index)}
+                              title="Eliminar proyecto"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                          
+                          <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between mb-1">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white pr-24">{port.title}</h3>
+                          </div>
+                          {port.description && (
+                            <p className="text-gray-600 dark:text-gray-300 text-sm whitespace-pre-wrap leading-relaxed mt-2">
+                              {port.description}
+                            </p>
+                          )}
+                          {port.imageUrl && (
+                            <div className="mt-4 flex gap-2">
+                              <span className="text-xs text-blue-500 flex items-center gap-1"><Link2 className="w-3 h-3" /> Foto adjunta</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="p-5 bg-blue-50/30 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900 shadow-sm rounded-xl relative group">
+                          <button 
+                            type="button" 
+                            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                            onClick={() => removePortfolio(index)}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                            <FormField
+                              control={form.control}
+                              name={`portfolioItems.${index}.title`}
+                              render={({ field: formField }) => (
+                                <FormItem>
+                                  <FormLabel>Título del Trabajo</FormLabel>
+                                  <FormControl><Input placeholder="Ej. Remodelación de Casa" {...formField} /></FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name={`portfolioItems.${index}.imageUrl`}
+                              render={({ field: formField }) => (
+                                <FormItem>
+                                  <FormLabel>URL de Fotografía (Opcional)</FormLabel>
+                                  <FormControl>
+                                    <div className="flex gap-2">
+                                      <Input placeholder="https://..." {...formField} />
+                                      <Button 
+                                        type="button" variant="secondary" size="icon" className="shrink-0"
+                                        onClick={() => handleCopy(formField.value || '', `img-${index}`)}
+                                      >
+                                        {copiedStates[`img-${index}`] ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4 text-gray-500" />}
+                                      </Button>
+                                      <Button 
+                                        type="button" variant="secondary" size="icon" className="shrink-0"
+                                        onClick={() => handleOpenLink(formField.value || '')} disabled={!formField.value}
+                                      >
+                                        <ExternalLink className="h-4 w-4 text-gray-500" />
+                                      </Button>
+                                    </div>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name={`portfolioItems.${index}.description`}
+                              render={({ field: formField }) => (
+                                <FormItem className="md:col-span-2">
+                                  <div className="flex items-center justify-between">
+                                    <FormLabel>Descripción Breve</FormLabel>
+                                    <button type="button" onClick={() => toast.info('Función en desarrollo: Generación de textos con IA')} className="text-xs text-purple-600 dark:text-purple-400 font-medium flex items-center gap-1 hover:underline">
+                                      <Sparkles className="w-3 h-3" /> Mejorar con IA
+                                    </button>
+                                  </div>
+                                  <FormControl><Textarea placeholder="Detalles de lo que hiciste..." {...formField} /></FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <div className="md:col-span-2 flex justify-end mt-2">
+                              <Button 
+                                type="button" 
+                                variant="secondary" 
+                                onClick={() => {
+                                  if (port?.title) {
+                                    setEditingPortfolio({ ...editingPortfolio, [field.id]: false });
+                                  } else {
+                                    toast.error("El Título es obligatorio");
+                                  }
+                                }}
+                              >
+                                Listo
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
+                </div>
                 
                 <button type="button" onClick={() => appendPortfolio({ title: '', description: '', imageUrl: '', projectUrl: '' })} className="w-full py-4 border-2 border-dashed border-gray-200 dark:border-gray-800 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-blue-600 transition-colors">
                   <Plus className="w-4 h-4" /> Añadir un Proyecto / Trabajo
@@ -1109,10 +1573,42 @@ export function ProfileDetailsForm({ form, mutation, uploadPhotoMutation, profil
             </details>
 
             <div className="pt-8">
-              <Button type="submit" variant="default" size="xl" className="w-full shadow-blue-500/20 shadow-xl" disabled={mutation.isPending}>
+              <Button type="submit" variant="default" size="xl" className="w-full shadow-blue-500/20 shadow-xl hidden md:block" disabled={mutation.isPending || !form.formState.isDirty}>
                 {mutation.isPending ? 'Guardando...' : 'Guardar Todo el Perfil'}
               </Button>
             </div>
+            
+            {/* Sticky Save Bar (Modernized UI) */}
+            {form.formState.isDirty && (
+              <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-50 animate-in slide-in-from-bottom-10 flex justify-center">
+                <div className="container max-w-4xl flex items-center justify-between gap-4">
+                  <div className="hidden sm:block">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">Tienes cambios sin guardar</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">No olvides guardar tu progreso antes de salir.</p>
+                  </div>
+                  <div className="flex gap-3 w-full sm:w-auto">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="flex-1 sm:flex-none border-gray-300 dark:border-gray-700" 
+                      onClick={() => form.reset()}
+                      disabled={mutation.isPending}
+                    >
+                      Descartar
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      variant="default" 
+                      className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25" 
+                      disabled={mutation.isPending}
+                    >
+                      {mutation.isPending ? 'Guardando...' : 'Guardar Cambios'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </form>
         </Form>
       </CardContent>
