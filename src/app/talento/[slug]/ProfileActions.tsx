@@ -12,9 +12,10 @@ type ProfileActionsProps = {
   contactEmail?: string;
   linkedinUrl?: string;
   whatsappNumber?: string;
+  profile?: any;
 };
 
-export function ProfileActions({ slug, isAnonymized, contactEmail, linkedinUrl, whatsappNumber }: ProfileActionsProps) {
+export function ProfileActions({ slug, isAnonymized, contactEmail, linkedinUrl, whatsappNumber, profile }: ProfileActionsProps) {
   const { role, isAuthenticated, accessToken, _hasHydrated } = useAuthStore();
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
